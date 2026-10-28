@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import asyncio
+import dataclasses
 import socket
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable
 from dataclasses import dataclass
 
 import pytest
@@ -23,6 +24,20 @@ STEP SOAK TEMP=300 PRESSURE=0.2 TIME=30
 FAST = HsmsTimeouts(t3=5.0, t5=0.2, t6=2.0, t7=2.0, t8=1.0)
 
 
+async def wait_until(cond: Callable[[], bool], timeout: float = 10.0, what: str = "condition") -> None:
+    """Poll ``cond`` against a wall-clock deadline.
+
+    Never count iterations of ``asyncio.sleep``: on Windows its real duration
+    depends on the system timer resolution, which other processes change.
+    """
+    loop = asyncio.get_running_loop()
+    deadline = loop.time() + timeout
+    while not cond():
+        if loop.time() > deadline:
+            raise AssertionError(f"timed out after {timeout}s waiting for {what}")
+        await asyncio.sleep(0.01)
+
+
 def free_port() -> int:
     with socket.socket() as s:
         s.bind(("127.0.0.1", 0))
@@ -38,17 +53,16 @@ class Bench:
 
 async def make_bench(*, online: bool = True, remote: bool = True, time_scale: float = 100.0) -> Bench:
     link = DirectLink(time_scale=time_scale)
-    cfg = EquipmentConfig(port=0, timeouts=FAST, initial_online=online, initial_remote=remote)
+    # fresh copy: tests may shorten timers and must not leak that into other tests
+    timeouts = dataclasses.replace(FAST)
+    cfg = EquipmentConfig(port=0, timeouts=timeouts, initial_online=online, initial_remote=remote)
     equipment = GemEquipment(link, cfg)
     await equipment.start()
-    host = GemHost(port=equipment.port, timeouts=FAST)
+    host = GemHost(port=equipment.port, timeouts=dataclasses.replace(FAST))
     await host.connect()
     await asyncio.wait_for(host.communicating.wait(), 5)
     # wait until the equipment side has processed the S1F14
-    for _ in range(100):
-        if equipment.comm.name == "COMMUNICATING":
-            break
-        await asyncio.sleep(0.01)
+    await wait_until(lambda: equipment.comm.name == "COMMUNICATING", 5, "COMMUNICATING")
     return Bench(equipment, link, host)
 
 

@@ -55,9 +55,10 @@ class ScanLoop:
             self._task = None
 
     async def _run(self) -> None:
-        last = time.monotonic()
+        last = time.perf_counter()
         while True:
-            start = time.monotonic()
+            start = time.perf_counter()
+            # perf_counter, not monotonic: on Windows monotonic ticks in ~15.6 ms steps.
             # Cap dt so a stalled event loop cannot make the process jump ahead.
             dt = min(start - last, 5 * self.scan_s) * self.time_scale
             last = start
@@ -70,5 +71,5 @@ class ScanLoop:
                     await self.io.write_outputs(self.controller)
             except Exception:
                 log.exception("controller scan failed")
-            elapsed = time.monotonic() - start
+            elapsed = time.perf_counter() - start
             await asyncio.sleep(max(0.0, self.scan_s - elapsed))

@@ -284,8 +284,10 @@ class ChamberController:
         phase = self._held_from if self.state is SeqState.HELD else self.state
         if self.state is SeqState.HELD:
             self.held_reason = HeldReason.NONE
-            # An abort acknowledges the alarm; the abort path itself may re-raise it.
-            self.alarm_word = 0
+            # An abort acknowledges the alarms (the abort path itself may re-raise
+            # them). A hot chuck keeps OVER_TEMPERATURE latched: it is reset with
+            # RESUME in IDLE once it has cooled below the hysteresis.
+            self.alarm_word = (1 << AlarmBit.OVER_TEMPERATURE) if self._overtemp_latched() else 0
         if phase is SeqState.LOADING and not self.wafer_present:
             self._finish_lot(EventCode.LOT_ABORTED)
         elif phase in (SeqState.PUMPDOWN, SeqState.PROCESSING, SeqState.VENTING):
