@@ -1,0 +1,56 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gemsim"
+version = "0.1.0"
+description = "SECS/GEM (SEMI E5/E30/E37 HSMS) equipment simulator with an OPC UA PLC-side bridge"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+dependencies = ["asyncua==2.1.0"]
+
+[project.optional-dependencies]
+dev = [
+    "pytest==9.1.1",
+    "pytest-asyncio==1.4.0",
+    "pytest-timeout==2.4.0",
+    "ruff==0.17.3",
+    "mypy==2.4.1",
+    "secsgem==0.3.0",
+]
+
+[project.scripts]
+gemsim = "gemsim.__main__:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+timeout = 120
+filterwarnings = ["ignore::DeprecationWarning:asyncua.*"]
+
+[tool.ruff]
+line-length = 110
+target-version = "py311"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF", "ASYNC"]
+ignore = ["RUF012"]
+
+[tool.mypy]
+python_version = "3.12"
+mypy_path = "src"
+packages = ["gemsim"]
+strict = true
+warn_unreachable = true
+
+[[tool.mypy.overrides]]
+module = ["asyncua.*"]
+ignore_missing_imports = true
