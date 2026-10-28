@@ -47,6 +47,11 @@ summary; elided parts are marked) and **the SML trace of the fault** (sections
 |---|---|
 | <img src="docs/screenshots/demo_console.png" width="560"> | <img src="docs/screenshots/trace_fault_recovery.png" width="300"> |
 
+**`make check`**: ruff, `mypy --strict` and the 133 tests, rendered from
+[`artifacts/check_output.txt`](artifacts/check_output.txt).
+
+![make check output](docs/screenshots/make_check.png)
+
 ---
 
 ## 1. Why GEM matters in a fab
@@ -630,11 +635,11 @@ PYTHONPATH=src .venv/Scripts/python -m gemsim inject NONE
 ## 8. Tests
 
 Last full run (`make check` on Windows 11, Python 3.12.10): ruff clean, ruff format clean,
-`mypy --strict`: no issues in 29 source files, **133 passed in 44.29 s**. Wall time varies
+`mypy --strict`: no issues in 29 source files, **133 passed in 42.94 s** (captured in `artifacts/check_output.txt`). Wall time varies
 with machine load; 31–62 s were observed across repeated runs. After the timing
-fixes described in DESIGN.md §10 the suite ran 18 times: 17 passed, and one
+fixes described in DESIGN.md §10 the suite ran 19 times: 18 passed, and one
 `make check` run stopped at the 120 s pytest timeout (a hang, test not identified).
-It did not recur in the 9 runs after it. A plausible cause, the HSMS listener
+It did not recur in the 10 runs after it. A plausible cause, the HSMS listener
 waiting for unclosed connections at shutdown, was fixed, but the hang was not
 reproduced, so that fix is not confirmed as the cause.
 
