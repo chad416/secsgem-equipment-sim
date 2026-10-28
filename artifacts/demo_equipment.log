@@ -1,32 +1,32 @@
-2026-10-29 00:03:52,293 INFO    gemsim.controller.opcua_server: controller OPC UA server on opc.tcp://127.0.0.1:65087/gemsim/ (ns=2, time scale x25)
-2026-10-29 00:03:52,307 INFO    gemsim.controller.link: OPC UA link connected to opc.tcp://127.0.0.1:65087/gemsim/ (ns=2)
-2026-10-29 00:03:52,310 INFO    gemsim.hsms.endpoints: equipment: HSMS passive listening on 127.0.0.1:65089
-2026-10-29 00:03:52,313 INFO    gemsim.hsms.endpoints: equipment: TCP connection from ('127.0.0.1', 65091)
-2026-10-29 00:03:52,313 INFO    gemsim.hsms.connection: equipment<-127.0.0.1:65091: NOT SELECTED -> SELECTED
-2026-10-29 00:03:52,313 INFO    gemsim.hsms.connection: host: NOT SELECTED -> SELECTED
-2026-10-29 00:03:52,313 INFO    gemsim.gem.equipment: communication state NOT COMMUNICATING / WAIT CRA -> COMMUNICATING
-2026-10-29 00:03:52,314 INFO    gemsim.gem.state_models: control state EQUIPMENT_OFFLINE -> ATTEMPT_ONLINE
-2026-10-29 00:03:52,314 INFO    gemsim.gem.state_models: control state ATTEMPT_ONLINE -> ONLINE_LOCAL
-2026-10-29 00:03:52,322 INFO    gemsim.gem.state_models: control state ONLINE_LOCAL -> ONLINE_REMOTE
-2026-10-29 00:03:52,346 INFO    gemsim.controller.opcua_server: command seq=1 -> OK
-2026-10-29 00:03:52,347 INFO    gemsim.gem.equipment: process state IDLE -> READY
-2026-10-29 00:03:52,399 INFO    gemsim.controller.opcua_server: command seq=2 -> OK
-2026-10-29 00:03:52,400 INFO    gemsim.gem.equipment: process state READY -> EXECUTING
-2026-10-29 00:03:52,402 INFO    gemsim.gem.equipment: remote command START -> controller OK
-2026-10-29 00:03:59,884 WARNING gemsim.controller.link: maintenance: Sim.Faults <- <Fault.VACUUM_LEAK: 1>
-2026-10-29 00:04:02,294 WARNING gemsim.gem.equipment: alarm SET 1 Pump-down did not reach base pressure
-2026-10-29 00:04:02,299 INFO    gemsim.gem.equipment: process state EXECUTING -> PAUSE
-2026-10-29 00:04:02,381 WARNING gemsim.controller.link: maintenance: Sim.Faults <- <Fault.NONE: 0>
-2026-10-29 00:04:02,416 INFO    gemsim.controller.opcua_server: command seq=3 -> OK
-2026-10-29 00:04:02,458 WARNING gemsim.gem.equipment: alarm CLEARED 1 Pump-down did not reach base pressure
-2026-10-29 00:04:02,486 INFO    gemsim.gem.equipment: process state PAUSE -> EXECUTING
-2026-10-29 00:04:02,500 INFO    gemsim.gem.equipment: remote command RESUME -> controller OK
-2026-10-29 00:04:15,647 INFO    gemsim.gem.equipment: process state EXECUTING -> READY
-2026-10-29 00:04:15,659 INFO    gemsim.gem.state_models: control state ONLINE_REMOTE -> HOST_OFFLINE
-2026-10-29 00:04:15,665 INFO    gemsim.hsms.connection: equipment<-127.0.0.1:65091: SELECTED -> NOT SELECTED
-2026-10-29 00:04:15,665 INFO    gemsim.gem.equipment: communication state COMMUNICATING -> NOT COMMUNICATING / WAIT CRA
-2026-10-29 00:04:15,666 INFO    gemsim.hsms.connection: host: SELECTED -> NOT SELECTED
-2026-10-29 00:04:15,672 INFO    gemsim.hsms.connection: host: closing connection (separate)
-2026-10-29 00:04:15,672 INFO    gemsim.hsms.connection: host: NOT SELECTED -> NOT CONNECTED
-2026-10-29 00:04:15,673 INFO    gemsim.hsms.connection: equipment<-127.0.0.1:65091: closing connection (peer sent Separate.req)
-2026-10-29 00:04:15,674 INFO    gemsim.hsms.connection: equipment<-127.0.0.1:65091: NOT SELECTED -> NOT CONNECTED
+2026-10-29 00:09:18,828 INFO    gemsim.controller.opcua_server: controller OPC UA server on opc.tcp://127.0.0.1:51709/gemsim/ (ns=2, time scale x25)
+2026-10-29 00:09:18,844 INFO    gemsim.controller.link: OPC UA link connected to opc.tcp://127.0.0.1:51709/gemsim/ (ns=2)
+2026-10-29 00:09:18,845 INFO    gemsim.hsms.endpoints: equipment: HSMS passive listening on 127.0.0.1:51712
+2026-10-29 00:09:18,849 INFO    gemsim.hsms.endpoints: equipment: TCP connection from ('127.0.0.1', 51714)
+2026-10-29 00:09:18,849 INFO    gemsim.hsms.connection: equipment<-127.0.0.1:51714: NOT SELECTED -> SELECTED
+2026-10-29 00:09:18,850 INFO    gemsim.hsms.connection: host: NOT SELECTED -> SELECTED
+2026-10-29 00:09:18,850 INFO    gemsim.gem.equipment: communication state NOT COMMUNICATING / WAIT CRA -> COMMUNICATING
+2026-10-29 00:09:18,851 INFO    gemsim.gem.state_models: control state EQUIPMENT_OFFLINE -> ATTEMPT_ONLINE
+2026-10-29 00:09:18,851 INFO    gemsim.gem.state_models: control state ATTEMPT_ONLINE -> ONLINE_LOCAL
+2026-10-29 00:09:18,859 INFO    gemsim.gem.state_models: control state ONLINE_LOCAL -> ONLINE_REMOTE
+2026-10-29 00:09:18,882 INFO    gemsim.controller.opcua_server: command seq=1 -> OK
+2026-10-29 00:09:18,903 INFO    gemsim.gem.equipment: process state IDLE -> READY
+2026-10-29 00:09:18,927 INFO    gemsim.controller.opcua_server: command seq=2 -> OK
+2026-10-29 00:09:18,952 INFO    gemsim.gem.equipment: process state READY -> EXECUTING
+2026-10-29 00:09:18,953 INFO    gemsim.gem.equipment: remote command START -> controller OK
+2026-10-29 00:09:26,614 WARNING gemsim.controller.link: maintenance: Sim.Faults <- <Fault.VACUUM_LEAK: 1>
+2026-10-29 00:09:28,976 WARNING gemsim.gem.equipment: alarm SET 1 Pump-down did not reach base pressure
+2026-10-29 00:09:29,042 INFO    gemsim.gem.equipment: process state EXECUTING -> PAUSE
+2026-10-29 00:09:29,323 WARNING gemsim.controller.link: maintenance: Sim.Faults <- <Fault.NONE: 0>
+2026-10-29 00:09:29,499 INFO    gemsim.controller.opcua_server: command seq=3 -> OK
+2026-10-29 00:09:29,578 WARNING gemsim.gem.equipment: alarm CLEARED 1 Pump-down did not reach base pressure
+2026-10-29 00:09:29,687 INFO    gemsim.gem.equipment: process state PAUSE -> EXECUTING
+2026-10-29 00:09:29,696 INFO    gemsim.gem.equipment: remote command RESUME -> controller OK
+2026-10-29 00:09:42,728 INFO    gemsim.gem.equipment: process state EXECUTING -> READY
+2026-10-29 00:09:43,059 INFO    gemsim.gem.state_models: control state ONLINE_REMOTE -> HOST_OFFLINE
+2026-10-29 00:09:43,131 INFO    gemsim.hsms.connection: equipment<-127.0.0.1:51714: SELECTED -> NOT SELECTED
+2026-10-29 00:09:43,132 INFO    gemsim.gem.equipment: communication state COMMUNICATING -> NOT COMMUNICATING / WAIT CRA
+2026-10-29 00:09:43,153 INFO    gemsim.hsms.connection: host: SELECTED -> NOT SELECTED
+2026-10-29 00:09:43,154 INFO    gemsim.hsms.connection: host: closing connection (separate)
+2026-10-29 00:09:43,154 INFO    gemsim.hsms.connection: host: NOT SELECTED -> NOT CONNECTED
+2026-10-29 00:09:43,164 INFO    gemsim.hsms.connection: equipment<-127.0.0.1:51714: closing connection (peer sent Separate.req)
+2026-10-29 00:09:43,164 INFO    gemsim.hsms.connection: equipment<-127.0.0.1:51714: NOT SELECTED -> NOT CONNECTED

@@ -35,11 +35,11 @@ test:
 	$(VENV_PY) -m pytest -q
 
 lint:
-	$(VENV_PY) -m ruff check src tests
-	$(VENV_PY) -m ruff format --check src tests
+	$(VENV_PY) -m ruff check src tests scripts
+	$(VENV_PY) -m ruff format --check src tests scripts
 
 format:
-	$(VENV_PY) -m ruff format src tests
+	$(VENV_PY) -m ruff format src tests scripts
 
 typecheck:
 	$(VENV_PY) -m mypy

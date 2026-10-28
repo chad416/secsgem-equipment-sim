@@ -6,6 +6,9 @@ between controller and GEM layer, HSMS between GEM layer and host.
 
 from __future__ import annotations
 
+import asyncio
+import contextlib
+import csv
 import logging
 import socket
 import sys
@@ -31,6 +34,43 @@ def free_port() -> int:
     with socket.socket() as s:
         s.bind(("127.0.0.1", 0))
         return int(s.getsockname()[1])
+
+
+PROCESS_COLUMNS = (
+    "process_s",
+    "state",
+    "wafer",
+    "step",
+    "pressure_torr",
+    "temperature_c",
+    "temperature_sp_c",
+    "alarm_word",
+    "faults",
+)
+
+
+async def sample_process(server: ControllerServer, path: Path, period_s: float = 0.1) -> None:
+    """Record the controller's process image (the PLC's view) for plotting."""
+    c = server.controller
+    with path.open("w", encoding="utf-8", newline="\n") as f:
+        out = csv.writer(f, lineterminator="\n")
+        out.writerow(PROCESS_COLUMNS)
+        while True:
+            out.writerow(
+                (
+                    f"{server.loop.process_time:.2f}",
+                    c.state.name,
+                    c.wafer_no,
+                    c.step_no,
+                    f"{c.pressure:.4g}",
+                    f"{c.temperature:.1f}",
+                    f"{c.temperature_sp:.1f}",
+                    c.alarm_word,
+                    int(c.faults),
+                )
+            )
+            f.flush()
+            await asyncio.sleep(period_s)
 
 
 def quiet_third_party_logs() -> None:
@@ -63,10 +103,12 @@ async def run_demo(
     equipment = GemEquipment(link, EquipmentConfig(port=0, initial_online=False, initial_remote=False))
     maintenance = MaintenanceClient(endpoint)
     trace_path = out_dir / "demo_trace.sml"
+    sampler: asyncio.Task[None] | None = None
     with trace_path.open("w", encoding="utf-8", newline="\n") as trace_file:
         trace = SmlTrace("H", trace_file, echo=echo)
         try:
             await controller.start()
+            sampler = asyncio.create_task(sample_process(controller, out_dir / "demo_process.csv"))
             await equipment.start()
             await maintenance.connect()
 
@@ -92,6 +134,10 @@ async def run_demo(
                 host, trace, recipe=recipe, wafers=wafers, fault_wafer=fault_wafer, hooks=hooks
             )
         finally:
+            if sampler is not None:
+                sampler.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await sampler
             await maintenance.close()
             await equipment.stop()
             await controller.stop()

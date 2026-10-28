@@ -1,6 +1,6 @@
 result            : PASS
 lot               : LOT-0001, 3 wafers requested, 3 reported complete
-elapsed (wall)    : 23.4 s
+elapsed (wall)    : 24.3 s
 remote commands   : START (local) -> HCACK 2, FLUSH -> HCACK 1, PP-SELECT NOPE -> HCACK 6, START WAFERS=99 -> HCACK 3, PP-SELECT -> HCACK 0, START -> HCACK 4, RESUME -> HCACK 4
 alarms            : SET ALID 1 ALCD 0x84 'Pump-down did not reach base pressure'; CLEARED ALID 1 ALCD 0x04
 messages traced   : 157

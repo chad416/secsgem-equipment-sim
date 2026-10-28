@@ -19,12 +19,33 @@ copied from [`artifacts/demo_summary.txt`](artifacts/demo_summary.txt):
 ```text
 result            : PASS
 lot               : LOT-0001, 3 wafers requested, 3 reported complete
-elapsed (wall)    : 23.4 s
+elapsed (wall)    : 24.3 s
 remote commands   : START (local) -> HCACK 2, FLUSH -> HCACK 1, PP-SELECT NOPE -> HCACK 6, START WAFERS=99 -> HCACK 3, PP-SELECT -> HCACK 0, START -> HCACK 4, RESUME -> HCACK 4
 alarms            : SET ALID 1 ALCD 0x84 'Pump-down did not reach base pressure'; CLEARED ALID 1 ALCD 0x04
 messages traced   : 157
 by type           : S1F0 x1, S1F1 x2, S1F2 x1, S1F3 x4, S1F4 x4, S1F13 x2, S1F14 x2, S1F15 x1, S1F16 x1, S2F13 x1, S2F14 x1, S2F15 x1, S2F16 x1, S2F33 x2, S2F34 x2, S2F35 x1, S2F36 x1, S2F37 x1, S2F38 x1, S2F41 x7, S2F42 x7, S5F1 x2, S5F2 x2, S5F3 x1, S5F4 x1, S6F11 x47, S6F12 x47, S7F1 x1, S7F2 x1, S7F3 x1, S7F4 x1, S7F5 x1, S7F6 x1, S7F19 x1, S7F20 x1, Deselect.req x1, Deselect.rsp x1, Select.req x1, Select.rsp x1, Separate.req x1
 ```
+
+### Screenshots (from the same run)
+
+**Controller process image during the lot.** Chamber pressure (log scale) and
+chuck temperature against the controller's process clock. Hatched: vacuum leak
+injected on wafer 2. Red band: ALID 1 latched until the host's RESUME. Plotted
+by [`scripts/plot_process.py`](scripts/plot_process.py) from
+[`artifacts/demo_process.csv`](artifacts/demo_process.csv) (212 samples).
+
+![Process timeline](docs/screenshots/process_timeline.png)
+
+**Console output of `make demo`** (start-up, the fault and recovery, the
+summary; elided parts are marked) and **the SML trace of the fault** (sections
+12–14). Both are rendered from the captured files
+[`artifacts/demo_console.txt`](artifacts/demo_console.txt) and
+[`artifacts/demo_trace.sml`](artifacts/demo_trace.sml) by
+[`scripts/render_screenshots.py`](scripts/render_screenshots.py) (headless Edge).
+
+| Console | SML trace, fault → recovery |
+|---|---|
+| <img src="docs/screenshots/demo_console.png" width="560"> | <img src="docs/screenshots/trace_fault_recovery.png" width="300"> |
 
 ---
 
@@ -210,24 +231,24 @@ S1F1 (ATTEMPT ON-LINE); the host's S1F2 brings it ON-LINE.
 
 ```text
 // ---- 1. HSMS connect + Select, establish communications (S1F13)
-00:03:52.313  H -> E  Select.req                   SB=0x00000001
-00:03:52.313  E -> H  Select.rsp status=0          SB=0x00000001
-00:03:52.313  E -> H  S1F13 W                      SB=0x00010001
+00:09:18.849  H -> E  Select.req                   SB=0x00000001
+00:09:18.849  E -> H  Select.rsp status=0          SB=0x00000001
+00:09:18.850  E -> H  S1F13 W                      SB=0x00010001
   <L [2]
     <A "GEMSIM-PC1">
     <A "0.1.0">
   >
 .
-00:03:52.313  H -> E  S1F14                        SB=0x00010001
+00:09:18.850  H -> E  S1F14                        SB=0x00010001
   <L [2]
     <B [1] 0x00>
     <L [0]>
   >
 .
-00:03:52.313  H -> E  S1F13 W                      SB=0x00000002
+00:09:18.850  H -> E  S1F13 W                      SB=0x00000002
   <L [0]>
 .
-00:03:52.313  E -> H  S1F14                        SB=0x00000002
+00:09:18.850  E -> H  S1F14                        SB=0x00000002
   <L [2]
     <B [1] 0x00>
     <L [2]
@@ -238,15 +259,15 @@ S1F1 (ATTEMPT ON-LINE); the host's S1F2 brings it ON-LINE.
 .
 
 // ---- 2. S1F1 while the tool is still OFF-LINE -> equipment must abort (S1F0)
-00:03:52.314  H -> E  S1F1 W                       SB=0x00000003
+00:09:18.851  H -> E  S1F1 W                       SB=0x00000003
 .
-00:03:52.314  E -> H  S1F0                         SB=0x00000003
+00:09:18.851  E -> H  S1F0                         SB=0x00000003
 .
 
 // ---- 3. operator turns the ON-LINE switch -> equipment sends S1F1, host answers S1F2
-00:03:52.314  E -> H  S1F1 W                       SB=0x00010002
+00:09:18.851  E -> H  S1F1 W                       SB=0x00010002
 .
-00:03:52.314  H -> E  S1F2                         SB=0x00010002
+00:09:18.851  H -> E  S1F2                         SB=0x00010002
   <L [0]>
 .
 ```
@@ -267,17 +288,17 @@ reply comes before the events it causes.
 
 ```text
 // ---- 12. [maintenance] vacuum leak injected on wafer 2; waiting for the alarm
-00:04:02.298  E -> H  S5F1 W                       SB=0x00010014
+00:09:29.041  E -> H  S5F1 W                       SB=0x00010014
   <L [3]
     <B [1] 0x84>
     <U4 [1] 1>
     <A "Pump-down did not reach base pressure">
   >
 .
-00:04:02.302  H -> E  S5F2                         SB=0x00010014
+00:09:29.058  H -> E  S5F2                         SB=0x00010014
   <B [1] 0x00>
 .
-00:04:02.313  E -> H  S6F11 W                      SB=0x00010015
+00:09:29.105  E -> H  S6F11 W                      SB=0x00010015
   <L [3]
     <U4 [1] 18>
     <U4 [1] 150>
@@ -294,10 +315,10 @@ reply comes before the events it causes.
     >
   >
 .
-00:04:02.314  H -> E  S6F12                        SB=0x00010015
+00:09:29.106  H -> E  S6F12                        SB=0x00010015
   <B [1] 0x00>
 .
-00:04:02.315  E -> H  S6F11 W                      SB=0x00010016
+00:09:29.144  E -> H  S6F11 W                      SB=0x00010016
   <L [3]
     <U4 [1] 19>
     <U4 [1] 110>
@@ -314,10 +335,10 @@ reply comes before the events it causes.
     >
   >
 .
-00:04:02.326  H -> E  S6F12                        SB=0x00010016
+00:09:29.147  H -> E  S6F12                        SB=0x00010016
   <B [1] 0x00>
 .
-00:04:02.327  E -> H  S6F11 W                      SB=0x00010017
+00:09:29.232  E -> H  S6F11 W                      SB=0x00010017
   <L [3]
     <U4 [1] 20>
     <U4 [1] 160>
@@ -333,19 +354,19 @@ reply comes before the events it causes.
     >
   >
 .
-00:04:02.335  H -> E  S6F12                        SB=0x00010017
+00:09:29.243  H -> E  S6F12                        SB=0x00010017
   <B [1] 0x00>
 .
 
 // ---- 13. host reads chamber pressure while HELD, technician fixes the leak
-00:04:02.336  H -> E  S1F3 W                       SB=0x00000017
+00:09:29.244  H -> E  S1F3 W                       SB=0x00000017
   <L [3]
     <U4 [1] 1020>
     <U4 [1] 1006>
     <U4 [1] 1008>
   >
 .
-00:04:02.361  E -> H  S1F4                         SB=0x00000017
+00:09:29.271  E -> H  S1F4                         SB=0x00000017
   <L [3]
     <F4 [1] 2>
     <L [1]
@@ -356,29 +377,29 @@ reply comes before the events it causes.
 .
 
 // ---- 14. RESUME -> controller clears the latched alarm and retries the pump-down
-00:04:02.382  H -> E  S2F41 W                      SB=0x00000018
+00:09:29.339  H -> E  S2F41 W                      SB=0x00000018
   <L [2]
     <A "RESUME">
     <L [0]>
   >
 .
-00:04:02.478  E -> H  S5F1 W                       SB=0x00010018
+00:09:29.663  E -> H  S5F1 W                       SB=0x00010018
   <L [3]
     <B [1] 0x04>
     <U4 [1] 1>
     <A "Pump-down did not reach base pressure">
   >
 .
-00:04:02.488  H -> E  S5F2                         SB=0x00010018
+00:09:29.685  H -> E  S5F2                         SB=0x00010018
   <B [1] 0x00>
 .
-00:04:02.507  E -> H  S2F42                        SB=0x00000018
+00:09:29.740  E -> H  S2F42                        SB=0x00000018
   <L [2]
     <B [1] 0x04>
     <L [0]>
   >
 .
-00:04:02.520  E -> H  S6F11 W                      SB=0x00010019
+00:09:29.766  E -> H  S6F11 W                      SB=0x00010019
   <L [3]
     <U4 [1] 21>
     <U4 [1] 151>
@@ -388,17 +409,17 @@ reply comes before the events it causes.
         <L [4]
           <U4 [1] 1>
           <A "Pump-down did not reach base pressure">
-          <F4 [1] 1.14303>
+          <F4 [1] 0.303996>
           <F4 [1] 25>
         >
       >
     >
   >
 .
-00:04:02.528  H -> E  S6F12                        SB=0x00010019
+00:09:29.769  H -> E  S6F12                        SB=0x00010019
   <B [1] 0x00>
 .
-00:04:02.535  E -> H  S6F11 W                      SB=0x0001001A
+00:09:29.914  E -> H  S6F11 W                      SB=0x0001001A
   <L [3]
     <U4 [1] 22>
     <U4 [1] 110>
@@ -415,10 +436,10 @@ reply comes before the events it causes.
     >
   >
 .
-00:04:02.536  H -> E  S6F12                        SB=0x0001001A
+00:09:29.944  H -> E  S6F12                        SB=0x0001001A
   <B [1] 0x00>
 .
-00:04:02.540  E -> H  S6F11 W                      SB=0x0001001B
+00:09:30.016  E -> H  S6F11 W                      SB=0x0001001B
   <L [3]
     <U4 [1] 23>
     <U4 [1] 161>
@@ -434,10 +455,10 @@ reply comes before the events it causes.
     >
   >
 .
-00:04:02.541  H -> E  S6F12                        SB=0x0001001B
+00:09:30.043  H -> E  S6F12                        SB=0x0001001B
   <B [1] 0x00>
 .
-00:04:02.941  E -> H  S6F11 W                      SB=0x0001001C
+00:09:30.108  E -> H  S6F11 W                      SB=0x0001001C
   <L [3]
     <U4 [1] 24>
     <U4 [1] 141>
@@ -447,14 +468,14 @@ reply comes before the events it causes.
         <L [4]
           <U4 [0]>
           <A "">
-          <F4 [1] 0.037674>
+          <F4 [1] 0.0414875>
           <F4 [1] 25>
         >
       >
     >
   >
 .
-00:04:02.949  H -> E  S6F12                        SB=0x0001001C
+00:09:30.133  H -> E  S6F12                        SB=0x0001001C
   <B [1] 0x00>
 ```
 
@@ -467,12 +488,12 @@ straight away; that S6F11 then got Reject.req reason 4 and was lost.
 
 ```text
 // ---- 16. host takes the tool off-line (S1F15), waits for CE EquipmentOffline, deselect and separate
-00:04:15.659  H -> E  S1F15 W                      SB=0x0000001A
+00:09:43.033  H -> E  S1F15 W                      SB=0x0000001A
 .
-00:04:15.663  E -> H  S1F16                        SB=0x0000001A
+00:09:43.086  E -> H  S1F16                        SB=0x0000001A
   <B [1] 0x00>
 .
-00:04:15.663  E -> H  S6F11 W                      SB=0x00010033
+00:09:43.086  E -> H  S6F11 W                      SB=0x00010033
   <L [3]
     <U4 [1] 47>
     <U4 [1] 100>
@@ -489,12 +510,12 @@ straight away; that S6F11 then got Reject.req reason 4 and was lost.
     >
   >
 .
-00:04:15.663  H -> E  S6F12                        SB=0x00010033
+00:09:43.108  H -> E  S6F12                        SB=0x00010033
   <B [1] 0x00>
 .
-00:04:15.665  H -> E  Deselect.req                 SB=0x0000001B
-00:04:15.666  E -> H  Deselect.rsp status=0        SB=0x0000001B
-00:04:15.666  H -> E  Separate.req                 SB=0x0000001C
+00:09:43.109  H -> E  Deselect.req                 SB=0x0000001B
+00:09:43.153  E -> H  Deselect.rsp status=0        SB=0x0000001B
+00:09:43.154  H -> E  Separate.req                 SB=0x0000001C
 ```
 
 ## 5. Engineering decisions
@@ -570,6 +591,12 @@ PYTHONPATH=src .venv/Scripts/python -m gemsim demo
 * `artifacts/demo_trace.sml` – full SML trace (host view)
 * `artifacts/demo_equipment.log` – equipment, controller and link log
 * `artifacts/demo_summary.txt` – result, HCACKs, alarms, message counts
+* `artifacts/demo_process.csv` – controller process image every 0.1 s (for the plot)
+
+The committed `artifacts/demo_console.txt` was captured with
+`make demo > artifacts/demo_console.txt 2>&1`. To regenerate the screenshots:
+`python scripts/plot_process.py` (needs matplotlib, which is not a project
+dependency) and `python scripts/render_screenshots.py` (Windows, Microsoft Edge).
 
 Options: `python -m gemsim demo --wafers 5 --fault-wafer 3 --time-scale 40 --no-fault --quiet`.
 
@@ -603,11 +630,11 @@ PYTHONPATH=src .venv/Scripts/python -m gemsim inject NONE
 ## 8. Tests
 
 Last full run (`make check` on Windows 11, Python 3.12.10): ruff clean, ruff format clean,
-`mypy --strict`: no issues in 29 source files, **133 passed in 50.52 s**. Wall time varies
+`mypy --strict`: no issues in 29 source files, **133 passed in 44.29 s**. Wall time varies
 with machine load; 31–62 s were observed across repeated runs. After the timing
-fixes described in DESIGN.md §10 the suite ran 17 times: 16 passed, and one
+fixes described in DESIGN.md §10 the suite ran 18 times: 17 passed, and one
 `make check` run stopped at the 120 s pytest timeout (a hang, test not identified).
-It did not recur in the 8 runs after it. A plausible cause, the HSMS listener
+It did not recur in the 9 runs after it. A plausible cause, the HSMS listener
 waiting for unclosed connections at shutdown, was fixed, but the hang was not
 reproduced, so that fix is not confirmed as the cause.
 
@@ -639,6 +666,8 @@ src/gemsim/
 recipes/        ANNEAL_STD.rcp
 tests/          pytest suite
 artifacts/      output of the last `make demo` (committed as evidence)
+docs/screenshots/  PNGs rendered from those artifacts
+scripts/        plot_process.py, render_screenshots.py
 DESIGN.md       design notes, state diagrams, ID tables, decisions
 ```
 
