@@ -1,0 +1,6 @@
+# ANNEAL_STD - generic three-step thermal recipe for the simulator.
+# Values are illustrative only; they are not taken from any real process.
+# STEP <name> TEMP=<degC> PRESSURE=<Torr> TIME=<s>
+STEP PREHEAT TEMP=200 PRESSURE=1.0 TIME=30
+STEP ANNEAL TEMP=400 PRESSURE=0.5 TIME=60
+STEP COOLDOWN TEMP=150 PRESSURE=1.0 TIME=30

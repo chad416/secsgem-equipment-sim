@@ -182,7 +182,7 @@ class OpcUaLink(ControllerLink):
         paths = [*STATUS_TAGS, "Cmd.AckSeq"]
         nodes = [self._node(p) for p in paths]
         values = await self._client.read_values(nodes)
-        for path, node, value in zip(paths, nodes, values):
+        for path, node, value in zip(paths, nodes, values, strict=True):
             self._path_by_node[node.nodeid] = path
             self.status[path] = value
         self._alarm_word = int(self.status["Alarms.Word"])
@@ -225,7 +225,9 @@ class OpcUaLink(ControllerLink):
         async with self._ring_lock:
             if write_idx <= self._event_idx:
                 return
-            codes, args = await self._client.read_values([self._node("Events.Code"), self._node("Events.Arg")])
+            codes, args = await self._client.read_values(
+                [self._node("Events.Code"), self._node("Events.Arg")]
+            )
             self._on_ring(write_idx, codes, args)
 
     # commands -------------------------------------------------------------------
@@ -285,6 +287,24 @@ class OpcUaLink(ControllerLink):
             [ua.DataValue(ua.Variant(float(v), ua.VariantType.Double)) for v in params.values()],
         )
 
+
+class MaintenanceClient:
+    """Separate OPC UA client standing for a technician's laptop on the
+    controller: it only writes ``Sim.Faults``. The GEM layer never uses it."""
+
+    def __init__(self, url: str) -> None:
+        self.url = url
+        self._client = Client(url, timeout=4)
+        self._ns = 0
+
+    async def connect(self) -> None:
+        await self._client.connect()
+        self._ns = await self._client.get_namespace_index(NAMESPACE_URI)
+
+    async def close(self) -> None:
+        await self._client.disconnect()
+
     async def inject(self, faults: Fault) -> None:
-        """Maintenance access: set ``Sim.Faults`` (not used by the GEM layer)."""
-        await self._node("Sim.Faults").write_value(ua.DataValue(ua.Variant(int(faults), ua.VariantType.UInt32)))
+        node = self._client.get_node(ua.NodeId(f"{OBJECT}.Sim.Faults", self._ns))
+        await node.write_value(ua.DataValue(ua.Variant(int(faults), ua.VariantType.UInt32)))
+        log.warning("maintenance: Sim.Faults <- %r", faults)

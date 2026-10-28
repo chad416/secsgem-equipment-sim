@@ -67,9 +67,7 @@ class HsmsHeader:
     system: int
 
     def encode(self) -> bytes:
-        return struct.pack(
-            _FMT, self.session_id, self.byte2, self.byte3, self.ptype, self.stype, self.system
-        )
+        return struct.pack(_FMT, self.session_id, self.byte2, self.byte3, self.ptype, self.stype, self.system)
 
     @classmethod
     def decode(cls, data: bytes) -> HsmsHeader:
@@ -91,9 +89,7 @@ class HsmsHeader:
         return self.byte3
 
     @classmethod
-    def data(
-        cls, session_id: int, stream: int, function: int, wbit: bool, system: int
-    ) -> HsmsHeader:
+    def data(cls, session_id: int, stream: int, function: int, wbit: bool, system: int) -> HsmsHeader:
         if not 0 <= stream <= 127 or not 0 <= function <= 255:
             raise ValueError(f"invalid S{stream}F{function}")
         return cls(session_id, (0x80 if wbit else 0) | stream, function, 0, SType.DATA, system)

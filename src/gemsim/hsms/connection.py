@@ -416,8 +416,8 @@ class HsmsConnection:
                 await self.close("connection exhaust: another session is active")
         elif st == SType.DESELECT_REQ:
             ok = self.state is State.SELECTED
-            status = DeselectStatus.OK if ok else DeselectStatus.NOT_ESTABLISHED
-            await self._write(HsmsHeader.control(SType.DESELECT_RSP, header.system, 0, status))
+            dstatus = DeselectStatus.OK if ok else DeselectStatus.NOT_ESTABLISHED
+            await self._write(HsmsHeader.control(SType.DESELECT_RSP, header.system, 0, dstatus))
             if ok:
                 self._set_state(State.NOT_SELECTED)
                 if self.passive:
@@ -429,6 +429,12 @@ class HsmsConnection:
             if entry is None or entry[0] != st:
                 await self._reject(header, RejectReason.TRANSACTION_NOT_OPEN)
                 return
+            # Change state here, in the reader, not in the waiting coroutine: the
+            # peer may send a data message right behind Select.rsp.
+            if st == SType.SELECT_RSP and header.byte3 == SelectStatus.OK:
+                self._set_state(State.SELECTED)
+            elif st == SType.DESELECT_RSP and header.byte3 == DeselectStatus.OK:
+                self._set_state(State.NOT_SELECTED)
             if not entry[1].done():
                 entry[1].set_result(header)
         elif st == SType.REJECT_REQ:

@@ -103,7 +103,9 @@ async def connect_active(
             break
         except OSError as exc:
             last_error = exc
-            log.warning("%s: connect attempt %d failed (%s); retry in T5=%.1fs", name, attempt, exc, timeouts.t5)
+            log.warning(
+                "%s: connect attempt %d failed (%s); retry in T5=%.1fs", name, attempt, exc, timeouts.t5
+            )
             if attempt < attempts:
                 await asyncio.sleep(timeouts.t5)
     else:

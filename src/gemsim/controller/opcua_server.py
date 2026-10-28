@@ -53,7 +53,8 @@ ARRAYS = {*EVENT_TAGS, *RECIPE_TAGS}
 
 
 def variant_type(name: str) -> ua.VariantType:
-    return getattr(ua.VariantType, name)  # type: ignore[no-any-return]
+    vt: ua.VariantType = getattr(ua.VariantType, name)
+    return vt
 
 
 class ControllerServer:
@@ -123,7 +124,9 @@ class ControllerServer:
         await self.server.start()
         self._written = {k: v for k, v in initial.items() if k not in ARRAYS}
         self.loop.start()
-        log.info("controller OPC UA server on %s (ns=%d, time scale x%g)", self.endpoint, self.ns, self.time_scale)
+        log.info(
+            "controller OPC UA server on %s (ns=%d, time scale x%g)", self.endpoint, self.ns, self.time_scale
+        )
 
     async def stop(self) -> None:
         await self.loop.stop()
@@ -168,7 +171,10 @@ class ControllerServer:
             durs = list(self._read("RecipeIn.Duration") or [])
             if not len(names) == len(temps) == len(press) == len(durs):
                 return CmdResult.BAD_ARG
-            steps = [RecipeStep(n, float(t), float(p), float(d)) for n, t, p, d in zip(names, temps, press, durs)]
+            steps = [
+                RecipeStep(n, float(t), float(p), float(d))
+                for n, t, p, d in zip(names, temps, press, durs, strict=True)
+            ]
             return c.load_recipe(str(self._read("RecipeIn.Name")), steps)
         return c.command(code, str(self._read("Cmd.StrArg")), int(self._read("Cmd.IntArg")))
 

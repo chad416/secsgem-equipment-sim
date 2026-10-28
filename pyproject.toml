@@ -42,7 +42,9 @@ src = ["src", "tests"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF", "ASYNC"]
-ignore = ["RUF012"]
+# ASYNC109/230/240: timeout parameters are part of the host API; the only blocking
+# file I/O is reading small local recipe/trace files.
+ignore = ["RUF012", "ASYNC109", "ASYNC230", "ASYNC240"]
 
 [tool.mypy]
 python_version = "3.12"
@@ -52,5 +54,6 @@ strict = true
 warn_unreachable = true
 
 [[tool.mypy.overrides]]
-module = ["asyncua.*"]
+module = ["asyncua", "asyncua.*"]
+follow_imports = "skip"
 ignore_missing_imports = true

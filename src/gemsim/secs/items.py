@@ -16,7 +16,7 @@ from __future__ import annotations
 import enum
 import math
 import struct
-from collections.abc import Iterable, Sequence
+from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass
 from typing import ClassVar, Union
 
@@ -183,7 +183,7 @@ class Num:
     SECS-II has no scalar type: a scalar is an array of length one.
     """
 
-    fmt: Fmt  # type: ignore[misc]
+    fmt: Fmt
     values: tuple[int | float, ...] = ()
 
     def __post_init__(self) -> None:
@@ -227,7 +227,7 @@ class Num:
 
 
 # Convenience constructors that read like SML: U4(5), F4(1.5, 2.5) ...
-def _num(fmt: Fmt):  # type: ignore[no-untyped-def]
+def _num(fmt: Fmt) -> Callable[..., Num]:
     def make(*values: int | float) -> Num:
         return Num(fmt, tuple(values))
 

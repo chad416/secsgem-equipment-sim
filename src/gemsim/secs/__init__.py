@@ -31,8 +31,6 @@ from .items import (
 from .message import SecsMessage
 
 __all__ = [
-    "A",
-    "B",
     "F4",
     "F8",
     "I1",
@@ -43,6 +41,8 @@ __all__ = [
     "U2",
     "U4",
     "U8",
+    "A",
+    "B",
     "Boolean",
     "Fmt",
     "Item",
