@@ -7,7 +7,7 @@ name = "gemsim"
 version = "0.1.0"
 description = "SECS/GEM (SEMI E5/E30/E37 HSMS) equipment simulator with an OPC UA PLC-side bridge"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 license = { text = "MIT" }
 dependencies = ["asyncua==2.1.0"]
 
@@ -39,7 +39,7 @@ filterwarnings = ["ignore::DeprecationWarning:asyncua.*"]
 
 [tool.ruff]
 line-length = 110
-target-version = "py311"
+target-version = "py312"
 src = ["src", "tests"]
 
 [tool.ruff.lint]

@@ -1,0 +1,13 @@
+# Runtime dependencies, fully pinned (resolved with pip on Python 3.12.10, Windows 11).
+aiosqlite==0.22.1
+anyio==4.15.1
+asyncua==2.1.0
+cffi==2.1.1
+cryptography==50.0.2
+idna==3.20
+pycparser==3.12
+python-dateutil==2.9.0.post0
+pytz==2026.5
+six==1.17.0
+sortedcontainers==2.4.0
+typing_extensions==4.16.0
