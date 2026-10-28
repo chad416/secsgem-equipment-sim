@@ -215,7 +215,7 @@ def build_parser() -> argparse.ArgumentParser:
     h.set_defaults(func=cmd_host)
 
     i = sub.add_parser("inject", help="maintenance: set controller fault bits")
-    i.add_argument("faults", nargs="+", choices=[f.name for f in Fault])
+    i.add_argument("faults", nargs="+", choices=list(Fault.__members__))
     i.add_argument("--opcua", default=DEFAULT_OPCUA)
     i.set_defaults(func=cmd_inject)
     return p
@@ -223,10 +223,11 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
-    logging.basicConfig(
-        level=logging.INFO if args.verbose else logging.WARNING,
-        format="%(asctime)s %(levelname)-7s %(name)s: %(message)s",
-    )
+    level = logging.INFO if args.verbose else logging.WARNING
+    logging.basicConfig(level=level, format="%(asctime)s %(levelname)-7s %(name)s: %(message)s")
+    # The demo raises the root level to INFO for its log file; keep the console as asked.
+    for handler in logging.getLogger().handlers:
+        handler.setLevel(level)
     quiet_third_party_logs()
     with contextlib.suppress(KeyboardInterrupt):
         return int(asyncio.run(args.func(args)))

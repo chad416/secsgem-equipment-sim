@@ -43,6 +43,7 @@ class HsmsPassiveServer:
         self.connection: HsmsConnection | None = None
         self._server: asyncio.Server | None = None
         self._listeners: list[StateListener] = []
+        self._accepted: set[HsmsConnection] = set()
 
     def add_state_listener(self, listener: StateListener) -> None:
         self._listeners.append(listener)
@@ -54,11 +55,17 @@ class HsmsPassiveServer:
         log.info("%s: HSMS passive listening on %s:%d", self.name, self.host, self.port)
 
     async def stop(self) -> None:
-        if self.connection:
-            await self.connection.close("server stop")
+        # Close every accepted connection, not only the session: since Python
+        # 3.12 Server.wait_closed() also waits for all accepted connections.
+        for conn in list(self._accepted):
+            await conn.close("server stop")
+        self._accepted.clear()
         if self._server:
             self._server.close()
-            await self._server.wait_closed()
+            try:
+                await asyncio.wait_for(self._server.wait_closed(), 5.0)
+            except TimeoutError:
+                log.warning("%s: listener did not close within 5 s", self.name)
 
     def _on_client(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
         peer = writer.get_extra_info("peername")
@@ -79,6 +86,7 @@ class HsmsPassiveServer:
             self.connection = conn
             for listener in self._listeners:
                 conn.add_state_listener(listener)
+        self._accepted = {c for c in self._accepted if not c.closed} | {conn}
         log.info("%s: TCP connection from %s%s", self.name, peer, " (exhausted)" if busy else "")
         conn.start()
 
