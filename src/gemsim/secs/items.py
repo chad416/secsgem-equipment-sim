@@ -16,7 +16,7 @@ from __future__ import annotations
 import enum
 import math
 import struct
-from collections.abc import Callable, Iterable, Sequence
+from collections.abc import Callable, Iterable, Iterator, Sequence
 from dataclasses import dataclass
 from typing import ClassVar, Union
 
@@ -92,7 +92,7 @@ class L:
     def __getitem__(self, index: int) -> Item:
         return self.items[index]
 
-    def __iter__(self):  # type: ignore[no-untyped-def]
+    def __iter__(self) -> Iterator[Item]:
         return iter(self.items)
 
     def encode(self) -> bytes:
