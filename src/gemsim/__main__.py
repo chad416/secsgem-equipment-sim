@@ -101,7 +101,10 @@ async def cmd_inject(args: argparse.Namespace) -> int:
 
 
 async def cmd_host(args: argparse.Namespace) -> int:
-    trace_file = open(args.trace, "w", encoding="utf-8", newline="\n") if args.trace else None  # noqa: SIM115
+    trace_file = None
+    if args.trace:
+        Path(args.trace).parent.mkdir(parents=True, exist_ok=True)
+        trace_file = open(args.trace, "w", encoding="utf-8", newline="\n")  # noqa: SIM115
     trace = SmlTrace("H", trace_file, echo=sys.stdout, echo_bodies=args.scenario is None)
     host = GemHost(args.address, args.port, trace=trace)
     try:
