@@ -1,0 +1,203 @@
+
+// ---- gemsim demo: controller opc.tcp://127.0.0.1:58332/gemsim/ (time scale x25), HSMS 127.0.0.1:58336, recipe ANNEAL_STD.rcp
+
+// ---- 1. HSMS connect + Select, establish communications (S1F13)
+14:20:56.170  H -> E  Select.req                   SB=0x00000001
+14:20:56.171  E -> H  Select.rsp status=0          SB=0x00000001
+14:20:56.171  E -> H  S1F13 W                      SB=0x00010001
+14:20:56.171  H -> E  S1F14                        SB=0x00010001
+14:20:56.171  H -> E  S1F13 W                      SB=0x00000002
+14:20:56.171  E -> H  S1F14                        SB=0x00000002
+
+// ---- 2. S1F1 while the tool is still OFF-LINE -> equipment must abort (S1F0)
+14:20:56.171  H -> E  S1F1 W                       SB=0x00000003
+14:20:56.171  E -> H  S1F0                         SB=0x00000003
+
+// ---- 3. operator turns the ON-LINE switch -> equipment sends S1F1, host answers S1F2
+14:20:56.172  E -> H  S1F1 W                       SB=0x00010002
+14:20:56.172  H -> E  S1F2                         SB=0x00010002
+
+// ---- 4. clean slate: delete all reports (S2F33 with empty list), then define, link, enable
+14:20:56.172  H -> E  S2F33 W                      SB=0x00000004
+14:20:56.172  E -> H  S2F34                        SB=0x00000004
+14:20:56.172  H -> E  S2F33 W                      SB=0x00000005
+14:20:56.173  E -> H  S2F34                        SB=0x00000005
+14:20:56.173  H -> E  S2F35 W                      SB=0x00000006
+14:20:56.173  E -> H  S2F36                        SB=0x00000006
+14:20:56.173  H -> E  S2F37 W                      SB=0x00000007
+14:20:56.173  E -> H  S2F38                        SB=0x00000007
+14:20:56.173  H -> E  S5F3 W                       SB=0x00000008
+14:20:56.175  E -> H  S5F4                         SB=0x00000008
+
+// ---- 5. read status variables and equipment constants, shorten pump-down timeout
+14:20:56.175  H -> E  S1F3 W                       SB=0x00000009
+14:20:56.175  E -> H  S1F4                         SB=0x00000009
+14:20:56.175  H -> E  S2F13 W                      SB=0x0000000A
+14:20:56.175  E -> H  S2F14                        SB=0x0000000A
+14:20:56.175  H -> E  S2F15 W                      SB=0x0000000B
+14:20:56.176  E -> H  S2F16                        SB=0x0000000B
+
+// ---- 6. process program download ANNEAL_STD (S7F1/S7F3), directory (S7F19), upload check (S7F5)
+14:20:56.179  H -> E  S7F1 W                       SB=0x0000000C
+14:20:56.179  E -> H  S7F2                         SB=0x0000000C
+14:20:56.179  H -> E  S7F3 W                       SB=0x0000000D
+14:20:56.179  E -> H  S7F4                         SB=0x0000000D
+14:20:56.179  H -> E  S7F19 W                      SB=0x0000000E
+14:20:56.179  E -> H  S7F20                        SB=0x0000000E
+14:20:56.179  H -> E  S7F5 W                       SB=0x0000000F
+14:20:56.180  E -> H  S7F6                         SB=0x0000000F
+14:20:56.180  H -> E  S1F3 W                       SB=0x00000010
+14:20:56.180  E -> H  S1F4                         SB=0x00000010
+
+// ---- 7. START while ON-LINE/LOCAL -> HCACK 2 (cannot perform now)
+14:20:56.180  H -> E  S2F41 W                      SB=0x00000011
+14:20:56.180  E -> H  S2F42                        SB=0x00000011
+
+// ---- 8. operator switches LOCAL -> REMOTE (CE ControlStateRemote)
+14:20:56.180  E -> H  S6F11 W                      SB=0x00010003
+14:20:56.181  H -> E  S6F12                        SB=0x00010003
+
+// ---- 9. negative checks: unknown command (HCACK 1), unknown PPID (HCACK 6), bad parameter (HCACK 3)
+14:20:56.181  H -> E  S2F41 W                      SB=0x00000012
+14:20:56.181  E -> H  S2F42                        SB=0x00000012
+14:20:56.181  H -> E  S2F41 W                      SB=0x00000013
+14:20:56.181  E -> H  S2F42                        SB=0x00000013
+14:20:56.181  H -> E  S2F41 W                      SB=0x00000014
+14:20:56.181  E -> H  S2F42                        SB=0x00000014
+
+// ---- 10. PP-SELECT ANNEAL_STD -> recipe validated and written to the controller
+14:20:56.181  H -> E  S2F41 W                      SB=0x00000015
+14:20:56.224  E -> H  S2F42                        SB=0x00000015
+14:20:56.224  E -> H  S6F11 W                      SB=0x00010004
+
+// ---- 11. START lot LOT-0001 with 3 wafers
+14:20:56.225  H -> E  S2F41 W                      SB=0x00000016
+14:20:56.225  H -> E  S6F12                        SB=0x00010004
+14:20:56.225  E -> H  S6F11 W                      SB=0x00010005
+14:20:56.226  H -> E  S6F12                        SB=0x00010005
+14:20:56.271  E -> H  S6F11 W                      SB=0x00010006
+14:20:56.272  E -> H  S2F42                        SB=0x00000016
+14:20:56.272  H -> E  S6F12                        SB=0x00010006
+14:20:56.272  E -> H  S6F11 W                      SB=0x00010007
+14:20:56.272  H -> E  S6F12                        SB=0x00010007
+14:20:56.561  E -> H  S6F11 W                      SB=0x00010008
+14:20:56.561  H -> E  S6F12                        SB=0x00010008
+14:20:57.729  E -> H  S6F11 W                      SB=0x00010009
+14:20:57.729  H -> E  S6F12                        SB=0x00010009
+14:20:57.731  E -> H  S6F11 W                      SB=0x0001000A
+14:20:57.731  H -> E  S6F12                        SB=0x0001000A
+14:20:58.994  E -> H  S6F11 W                      SB=0x0001000B
+14:20:58.998  H -> E  S6F12                        SB=0x0001000B
+14:20:59.002  E -> H  S6F11 W                      SB=0x0001000C
+14:20:59.003  H -> E  S6F12                        SB=0x0001000C
+14:21:01.427  E -> H  S6F11 W                      SB=0x0001000D
+14:21:01.430  H -> E  S6F12                        SB=0x0001000D
+14:21:01.431  E -> H  S6F11 W                      SB=0x0001000E
+14:21:01.432  H -> E  S6F12                        SB=0x0001000E
+14:21:02.630  E -> H  S6F11 W                      SB=0x0001000F
+14:21:02.631  H -> E  S6F12                        SB=0x0001000F
+14:21:02.634  E -> H  S6F11 W                      SB=0x00010010
+14:21:02.634  H -> E  S6F12                        SB=0x00010010
+14:21:02.975  E -> H  S6F11 W                      SB=0x00010011
+14:21:02.976  H -> E  S6F12                        SB=0x00010011
+14:21:03.264  E -> H  S6F11 W                      SB=0x00010012
+14:21:03.265  H -> E  S6F12                        SB=0x00010012
+14:21:03.678  E -> H  S6F11 W                      SB=0x00010013
+14:21:03.679  H -> E  S6F12                        SB=0x00010013
+
+// ---- 12. [maintenance] vacuum leak injected on wafer 2; waiting for the alarm
+2026-10-29 14:21:03,685 WARNING gemsim.controller.link: maintenance: Sim.Faults <- <Fault.VACUUM_LEAK: 1>
+2026-10-29 14:21:06,024 WARNING gemsim.gem.equipment: alarm SET 1 Pump-down did not reach base pressure
+14:21:06.028  E -> H  S5F1 W                       SB=0x00010014
+14:21:06.029  H -> E  S5F2                         SB=0x00010014
+14:21:06.032  E -> H  S6F11 W                      SB=0x00010015
+14:21:06.032  H -> E  S6F12                        SB=0x00010015
+14:21:06.034  E -> H  S6F11 W                      SB=0x00010016
+14:21:06.035  H -> E  S6F12                        SB=0x00010016
+14:21:06.037  E -> H  S6F11 W                      SB=0x00010017
+14:21:06.037  H -> E  S6F12                        SB=0x00010017
+
+// ---- 13. host reads chamber pressure while HELD, technician fixes the leak
+14:21:06.038  H -> E  S1F3 W                       SB=0x00000017
+14:21:06.040  E -> H  S1F4                         SB=0x00000017
+2026-10-29 14:21:06,043 WARNING gemsim.controller.link: maintenance: Sim.Faults <- <Fault.NONE: 0>
+
+// ---- 14. RESUME -> controller clears the latched alarm and retries the pump-down
+14:21:06.044  H -> E  S2F41 W                      SB=0x00000018
+2026-10-29 14:21:06,117 WARNING gemsim.gem.equipment: alarm CLEARED 1 Pump-down did not reach base pressure
+14:21:06.123  E -> H  S5F1 W                       SB=0x00010018
+14:21:06.123  H -> E  S5F2                         SB=0x00010018
+14:21:06.126  E -> H  S2F42                        SB=0x00000018
+14:21:06.127  E -> H  S6F11 W                      SB=0x00010019
+14:21:06.128  H -> E  S6F12                        SB=0x00010019
+14:21:06.131  E -> H  S6F11 W                      SB=0x0001001A
+14:21:06.131  H -> E  S6F12                        SB=0x0001001A
+14:21:06.132  E -> H  S6F11 W                      SB=0x0001001B
+14:21:06.133  H -> E  S6F12                        SB=0x0001001B
+14:21:06.570  E -> H  S6F11 W                      SB=0x0001001C
+14:21:06.572  H -> E  S6F12                        SB=0x0001001C
+14:21:06.573  E -> H  S6F11 W                      SB=0x0001001D
+14:21:06.574  H -> E  S6F12                        SB=0x0001001D
+14:21:07.825  E -> H  S6F11 W                      SB=0x0001001E
+14:21:07.826  H -> E  S6F12                        SB=0x0001001E
+14:21:07.828  E -> H  S6F11 W                      SB=0x0001001F
+14:21:07.828  H -> E  S6F12                        SB=0x0001001F
+14:21:10.230  E -> H  S6F11 W                      SB=0x00010020
+14:21:10.235  H -> E  S6F12                        SB=0x00010020
+14:21:10.245  E -> H  S6F11 W                      SB=0x00010021
+14:21:10.250  H -> E  S6F12                        SB=0x00010021
+14:21:11.489  E -> H  S6F11 W                      SB=0x00010022
+14:21:11.490  H -> E  S6F12                        SB=0x00010022
+14:21:11.494  E -> H  S6F11 W                      SB=0x00010023
+14:21:11.495  H -> E  S6F12                        SB=0x00010023
+14:21:11.853  E -> H  S6F11 W                      SB=0x00010024
+14:21:11.855  H -> E  S6F12                        SB=0x00010024
+14:21:12.222  E -> H  S6F11 W                      SB=0x00010025
+14:21:12.222  H -> E  S6F12                        SB=0x00010025
+14:21:12.517  E -> H  S6F11 W                      SB=0x00010026
+14:21:12.518  H -> E  S6F12                        SB=0x00010026
+14:21:13.722  E -> H  S6F11 W                      SB=0x00010027
+14:21:13.722  H -> E  S6F12                        SB=0x00010027
+14:21:13.722  E -> H  S6F11 W                      SB=0x00010028
+14:21:13.723  H -> E  S6F12                        SB=0x00010028
+14:21:14.963  E -> H  S6F11 W                      SB=0x00010029
+14:21:14.963  H -> E  S6F12                        SB=0x00010029
+14:21:14.963  E -> H  S6F11 W                      SB=0x0001002A
+14:21:14.964  H -> E  S6F12                        SB=0x0001002A
+14:21:17.362  E -> H  S6F11 W                      SB=0x0001002B
+14:21:17.363  H -> E  S6F12                        SB=0x0001002B
+14:21:17.363  E -> H  S6F11 W                      SB=0x0001002C
+14:21:17.363  H -> E  S6F12                        SB=0x0001002C
+14:21:18.553  E -> H  S6F11 W                      SB=0x0001002D
+14:21:18.554  H -> E  S6F12                        SB=0x0001002D
+14:21:18.554  E -> H  S6F11 W                      SB=0x0001002E
+14:21:18.554  H -> E  S6F12                        SB=0x0001002E
+14:21:18.961  E -> H  S6F11 W                      SB=0x0001002F
+14:21:18.962  H -> E  S6F12                        SB=0x0001002F
+14:21:19.326  E -> H  S6F11 W                      SB=0x00010030
+14:21:19.326  H -> E  S6F12                        SB=0x00010030
+14:21:19.326  E -> H  S6F11 W                      SB=0x00010031
+14:21:19.327  H -> E  S6F12                        SB=0x00010031
+14:21:19.327  E -> H  S6F11 W                      SB=0x00010032
+14:21:19.327  H -> E  S6F12                        SB=0x00010032
+
+// ---- 15. lot complete: equipment reports 3 wafers; final status
+14:21:19.327  H -> E  S1F3 W                       SB=0x00000019
+14:21:19.328  E -> H  S1F4                         SB=0x00000019
+
+// ---- 16. host takes the tool off-line (S1F15), waits for CE EquipmentOffline, then Separate
+14:21:19.328  H -> E  S1F15 W                      SB=0x0000001A
+14:21:19.328  E -> H  S1F16                        SB=0x0000001A
+14:21:19.328  E -> H  S6F11 W                      SB=0x00010033
+14:21:19.329  H -> E  S6F12                        SB=0x00010033
+14:21:19.329  H -> E  Separate.req                 SB=0x0000001B
+
+result            : PASS
+lot               : LOT-0001, 3 wafers requested, 3 reported complete
+elapsed (wall)    : 23.2 s
+remote commands   : START (local) -> HCACK 2, FLUSH -> HCACK 1, PP-SELECT NOPE -> HCACK 6, START WAFERS=99 -> HCACK 3, PP-SELECT -> HCACK 0, START -> HCACK 4, RESUME -> HCACK 4
+alarms            : SET ALID 1 ALCD 0x84 'Pump-down did not reach base pressure'; CLEARED ALID 1 ALCD 0x04
+messages traced   : 155
+by type           : S1F0 x1, S1F1 x2, S1F2 x1, S1F3 x4, S1F4 x4, S1F13 x2, S1F14 x2, S1F15 x1, S1F16 x1, S2F13 x1, S2F14 x1, S2F15 x1, S2F16 x1, S2F33 x2, S2F34 x2, S2F35 x1, S2F36 x1, S2F37 x1, S2F38 x1, S2F41 x7, S2F42 x7, S5F1 x2, S5F2 x2, S5F3 x1, S5F4 x1, S6F11 x47, S6F12 x47, S7F1 x1, S7F2 x1, S7F3 x1, S7F4 x1, S7F5 x1, S7F6 x1, S7F19 x1, S7F20 x1, Select.req x1, Select.rsp x1, Separate.req x1
+full SML trace    : artifacts/demo_trace.sml
+equipment log     : artifacts/demo_equipment.log

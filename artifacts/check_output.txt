@@ -1,0 +1,10 @@
+.venv/Scripts/python.exe -m ruff check src tests scripts
+All checks passed!
+.venv/Scripts/python.exe -m ruff format --check src tests scripts
+46 files already formatted
+.venv/Scripts/python.exe -m mypy
+Success: no issues found in 30 source files
+.venv/Scripts/python.exe -m pytest -q
+........................................................................ [ 51%]
+....................................................................     [100%]
+140 passed in 33.11s
