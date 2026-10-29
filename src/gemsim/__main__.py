@@ -6,6 +6,7 @@ python -m gemsim equipment --online --remote
 python -m gemsim host --scenario lot       # scripted host against a running tool
 python -m gemsim host                      # interactive host shell
 python -m gemsim inject VACUUM_LEAK        # maintenance: inject a controller fault
+python -m gemsim coverage                  # SECS-II message coverage table (markdown)
 """
 
 from __future__ import annotations
@@ -22,6 +23,7 @@ from .controller.interface import Fault
 from .controller.link import MaintenanceClient, OpcUaLink
 from .controller.model import ChamberController
 from .controller.opcua_server import ControllerServer
+from .coverage import coverage_markdown
 from .demo import DEFAULT_RECIPE, ROOT, format_summary, quiet_third_party_logs, run_demo
 from .gem.equipment import EquipmentConfig, GemEquipment
 from .host.host import GemHost
@@ -117,6 +119,16 @@ async def cmd_host(args: argparse.Namespace) -> int:
         await host.close()
         if trace_file:
             trace_file.close()
+
+
+async def cmd_coverage(args: argparse.Namespace) -> int:
+    text = coverage_markdown()
+    if args.write:
+        Path(args.write).write_text(text, encoding="utf-8", newline="\n")
+        print(f"wrote {args.write}")
+    else:
+        print(text, end="")
+    return 0
 
 
 HELP = """commands:
@@ -222,6 +234,10 @@ def build_parser() -> argparse.ArgumentParser:
     i.add_argument("faults", nargs="+", choices=list(Fault.__members__))
     i.add_argument("--opcua", default=DEFAULT_OPCUA)
     i.set_defaults(func=cmd_inject)
+
+    m = sub.add_parser("coverage", help="print the SECS-II message coverage table (markdown)")
+    m.add_argument("--write", metavar="PATH", help="write it to PATH instead of stdout")
+    m.set_defaults(func=cmd_coverage)
     return p
 
 

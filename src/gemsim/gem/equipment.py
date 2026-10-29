@@ -106,6 +106,51 @@ SEQUENCER_COMMANDS = {
     "ABORT": CmdCode.ABORT,
 }
 
+# Primaries the equipment accepts from the host: (stream, function) -> (E5 name, handler).
+# This table is the dispatch table, and docs/message_coverage.md is generated from it.
+HOST_PRIMARIES: dict[tuple[int, int], tuple[str, str]] = {
+    (1, 1): ("Are You There", "_s1f1"),
+    (1, 3): ("Selected Equipment Status", "_s1f3"),
+    (1, 11): ("Status Variable Namelist", "_s1f11"),
+    (1, 13): ("Establish Communications", "_s1f13"),
+    (1, 15): ("Request OFF-LINE", "_s1f15"),
+    (1, 17): ("Request ON-LINE", "_s1f17"),
+    (1, 21): ("Data Variable Namelist", "_s1f21"),
+    (1, 23): ("Collection Event Namelist", "_s1f23"),
+    (2, 13): ("Equipment Constant Request", "_s2f13"),
+    (2, 15): ("New Equipment Constant Send", "_s2f15"),
+    (2, 17): ("Date and Time Request", "_s2f17"),
+    (2, 29): ("Equipment Constant Namelist", "_s2f29"),
+    (2, 31): ("Date and Time Set", "_s2f31"),
+    (2, 33): ("Define Report", "_s2f33"),
+    (2, 35): ("Link Event Report", "_s2f35"),
+    (2, 37): ("Enable/Disable Event Report", "_s2f37"),
+    (2, 41): ("Host Command Send", "_s2f41"),
+    (5, 3): ("Enable/Disable Alarm Send", "_s5f3"),
+    (5, 5): ("List Alarms Request", "_s5f5"),
+    (5, 7): ("List Enabled Alarms Request", "_s5f7"),
+    (6, 15): ("Event Report Request", "_s6f15"),
+    (6, 19): ("Individual Report Request", "_s6f19"),
+    (7, 1): ("Process Program Load Inquire", "_s7f1"),
+    (7, 3): ("Process Program Send", "_s7f3"),
+    (7, 5): ("Process Program Request", "_s7f5"),
+    (7, 17): ("Delete Process Program Send", "_s7f17"),
+    (7, 19): ("Current EPPD Request", "_s7f19"),
+}
+
+# Primaries the equipment sends on its own (single-block, no reply for stream 9).
+EQUIPMENT_PRIMARIES: dict[tuple[int, int], str] = {
+    (1, 1): "Are You There (ATTEMPT ON-LINE)",
+    (1, 13): "Establish Communications",
+    (5, 1): "Alarm Report Send",
+    (6, 11): "Event Report Send",
+    (9, 1): "Unrecognized Device ID",
+    (9, 3): "Unrecognized Stream Type",
+    (9, 5): "Unrecognized Function Type",
+    (9, 7): "Illegal Data",
+    (9, 9): "Transaction Timer Timeout",
+}
+
 
 @dataclass
 class EquipmentConfig:
@@ -305,38 +350,8 @@ class GemEquipment:
 
     # ======================================================= message dispatch
     def _register_handlers(self) -> None:
-        h = self._handlers
-        h[(1, 1)] = self._s1f1
-        h[(1, 3)] = self._s1f3
-        h[(1, 11)] = self._s1f11
-        h[(1, 13)] = self._s1f13
-        h[(1, 15)] = self._s1f15
-        h[(1, 17)] = self._s1f17
-        h[(1, 21)] = self._s1f21
-        h[(1, 23)] = self._s1f23
-        h[(2, 13)] = self._s2f13
-        h[(2, 15)] = self._s2f15
-        h[(2, 17)] = self._s2f17
-        h[(2, 29)] = self._s2f29
-        h[(2, 31)] = self._s2f31
-        h[(2, 33)] = self._s2f33
-        h[(2, 35)] = self._s2f35
-        h[(2, 37)] = self._s2f37
-        h[(2, 41)] = self._s2f41
-        h[(5, 3)] = self._s5f3
-        h[(5, 5)] = self._s5f5
-        h[(5, 7)] = self._s5f7
-        h[(6, 15)] = self._s6f15
-        h[(6, 19)] = self._s6f19
-        h[(7, 1)] = self._s7f1
-        h[(7, 3)] = self._s7f3
-        h[(7, 5)] = self._s7f5
-        h[(7, 17)] = self._s7f17
-        h[(7, 19)] = self._s7f19
-
-    @property
-    def supported(self) -> list[tuple[int, int]]:
-        return sorted(self._handlers)
+        for sf, (_, method) in HOST_PRIMARIES.items():
+            self._handlers[sf] = getattr(self, method)
 
     async def _send_s9(self, function: int, msg: SecsMessage) -> None:
         conn = self.connection
