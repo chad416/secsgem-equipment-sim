@@ -2,13 +2,19 @@
 
 from __future__ import annotations
 
+import dataclasses
+from typing import Any
+
 import pytest
 
-from gemsim.gem.ids import CE, SV, ControlState
-from gemsim.gem.state_models import ControlStateMachine, OnlAck
-from gemsim.host.host import TransactionAborted
+from gemsim.controller.link import DirectLink
+from gemsim.gem.equipment import EquipmentConfig, GemEquipment
+from gemsim.gem.ids import CE, EC, SV, ControlState
+from gemsim.gem.state_models import CommState, ControlStateMachine, OnlAck
+from gemsim.host.host import GemHost, TransactionAborted
+from gemsim.secs import SecsMessage
 
-from .conftest import configure_reports, make_bench
+from .conftest import FAST, configure_reports, make_bench, wait_until
 
 EQ_OFF, ATTEMPT, HOST_OFF = (
     ControlState.EQUIPMENT_OFFLINE,
@@ -117,3 +123,44 @@ async def test_attempt_online_without_communication_goes_host_offline() -> None:
     finally:
         await b.host.close()
         await b.equipment.stop()
+
+
+class SilentOnceHost(GemHost):
+    """Host that does not answer the equipment's first S1F13 (the equipment then hits T3)."""
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        self.s1f13_seen = 0
+
+    async def _on_primary(self, msg: SecsMessage) -> SecsMessage | None:
+        if (msg.stream, msg.function) == (1, 13):
+            self.s1f13_seen += 1
+            if self.s1f13_seen == 1:
+                return None
+        return await super()._on_primary(msg)
+
+
+async def test_communication_state_retries_after_wait_delay() -> None:
+    """E30: WAIT CRA -(T3)-> WAIT DELAY -(EstablishCommunicationsTimeout)-> WAIT CRA, new S1F13."""
+    timeouts = dataclasses.replace(FAST, t3=0.3)
+    eq = GemEquipment(DirectLink(), EquipmentConfig(port=0, timeouts=timeouts, initial_online=True))
+    eq.vars.ecs[EC.ESTABLISH_COMM_TIMEOUT].value = 1
+    seen: list[CommState] = []
+    set_comm = eq._set_comm
+
+    def record(state: CommState) -> None:
+        if state is not eq.comm:
+            seen.append(state)
+        set_comm(state)
+
+    eq._set_comm = record  # type: ignore[method-assign]
+    await eq.start()
+    host = SilentOnceHost(port=eq.port, timeouts=dataclasses.replace(FAST))
+    try:
+        await host.connect()
+        await wait_until(lambda: eq.comm is CommState.COMMUNICATING, 5, "COMMUNICATING")
+        assert host.s1f13_seen == 2
+        assert seen == [CommState.WAIT_DELAY, CommState.WAIT_CRA, CommState.COMMUNICATING]
+    finally:
+        await host.close()
+        await eq.stop()

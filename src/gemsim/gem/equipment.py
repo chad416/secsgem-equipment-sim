@@ -779,8 +779,13 @@ class GemEquipment:
                 self._comm_task.cancel()
 
     async def _establish_comm(self, conn: HsmsConnection) -> None:
-        """E30 4.2.1: equipment sends S1F13 until it gets COMMACK 0."""
+        """E30 communication state: send S1F13 until COMMACK 0.
+
+        WAIT CRA -> (T3 or COMMACK != 0) -> WAIT DELAY -> (delay expired) -> WAIT CRA
+        and a new S1F13. A host S1F13 received meanwhile ends the loop.
+        """
         while not self._communicating() and not conn.closed:
+            self._set_comm(CommState.WAIT_CRA)
             try:
                 reply = await conn.request(SecsMessage(1, 13, True, L(A(MDLN), A(SOFTREV))))
                 body = reply.body
