@@ -1,4 +1,4 @@
-# gemsim – design notes
+# gemsim design notes
 
 This document explains how the simulator is put together and why. The README
 covers what it does and how to run it.
@@ -49,12 +49,14 @@ Non-goals
 | `gemsim.host` | scriptable host and the lot scenario |
 | `gemsim.trace` | SML trace hook used by the host (and usable on the equipment side) |
 | `gemsim.demo` | wires all three together for `make demo` |
+| `gemsim.coverage` | message coverage table generated from the equipment's dispatch table |
 
-The GEM layer never imports the controller model. It depends on the abstract
+The GEM layer never imports the controller model (a test checks this). It depends on the abstract
 `ControllerLink`, which has two implementations:
 
-* `OpcUaLink` – the real path (asyncua client, subscription + handshake).
-* `DirectLink` – the same controller model in-process, no sockets. Used by
+* `OpcUaLink`: the real path (asyncua client, subscription + handshake,
+  reconnect with backoff, section 3.5).
+* `DirectLink`: the same controller model in-process, no sockets. Used by
   GEM unit tests so that report and HCACK tests run in milliseconds and do not
   depend on OPC UA start-up time.
 
@@ -129,8 +131,27 @@ the host. Latched alarms are cleared by the host's RESUME (retry) or ABORT,
 which is the controller's acknowledge.
 
 The GEM layer adds one alarm of its own, ALID 10 *controller link lost*, set
-when the OPC UA subscription reports a status change or when `Heartbeat` has
-not changed for `watchdog_s` (3 s by default).
+when the link is down (section 3.5) or when `Heartbeat` has not changed for
+`watchdog_s` (3 s by default; covers a controller whose scan has stopped while
+its OPC UA server still answers). It clears when both conditions are gone.
+
+### 3.5 Link loss and reconnect
+
+`OpcUaLink` reads `Heartbeat` once a second as a health check. A failed read,
+or a bad status reported by the subscription, marks the link down: ALID 10 is
+set, S2F41 answers HCACK 2, and S2F15 answers EAC 2 for constants that map to
+controller parameters. A command in flight when the session drops returns
+`NO_RESPONSE` (HCACK 2) instead of raising.
+
+While down, the link reconnects with exponential backoff from 0.5 s to 10 s.
+On reconnect it reads the full status image first: the alarm word goes through
+the normal edge detection, so an alarm latched during the outage is reported.
+If the event write index moved forward, the missed ring entries are replayed
+(at most 64, an overrun is logged). If it went back, the controller restarted:
+the index is resynchronised and a warning says that events from the outage may
+be missing. `test_e2e.py` stops the controller, checks ALID 10 and HCACK 2,
+starts a new controller on the same endpoint and checks that ALID 10 clears and
+a recipe can be selected again.
 
 ## 4. State models
 
@@ -154,11 +175,16 @@ NOT CONNECTED --TCP accept/connect--> NOT SELECTED --Select.req/rsp(0)--> SELECT
 T8 is checked per received chunk, not per byte. A stream socket does not expose
 byte timing, so chunk granularity is the closest available.
 
+HSMS-SS (E37.1) ends a session with Separate.req; the host does that. The
+passive side still answers Deselect.req for hosts that send it.
+
 Other E37 behaviour: data messages before SELECTED get Reject.req reason 4;
 unknown SType reason 1; PType ≠ 0 reason 2; a response control message with
 no open transaction reason 3. A second TCP connection while a session is
 active is answered with Select.rsp status 3 (connection exhaust) and closed.
-Select.req on an already selected connection gets status 1.
+Select.req on an already selected connection gets status 1. If handling a
+received frame raises unexpectedly, the reader logs it and closes the
+connection rather than leaving a session that no longer reads.
 
 A detail that showed up in testing: the active side must switch to SELECTED
 in its reader, the moment Select.rsp arrives, not later in the coroutine that
@@ -169,9 +195,10 @@ rejected it with reason 4.
 ### 4.2 Communication state (E30 4.2.1)
 
 On SELECTED the equipment enters NOT COMMUNICATING / WAIT CRA and sends S1F13.
-COMMACK 0 → COMMUNICATING. A failed attempt → WAIT DELAY for
-EstablishCommunicationsTimeout (EC 3001) and retry. A host S1F13 received in
-any state is answered with COMMACK 0 and also establishes communication.
+COMMACK 0 → COMMUNICATING. A failed attempt (T3 or COMMACK ≠ 0) → WAIT DELAY
+for EstablishCommunicationsTimeout (EC 3001), then back to WAIT CRA with a new
+S1F13. A host S1F13 received in any state is answered with COMMACK 0 and also
+establishes communication.
 Losing the HSMS session returns to WAIT CRA. DISABLED is not modelled.
 
 While not communicating, any primary other than S1F13 is answered with SxF0.
@@ -194,15 +221,15 @@ host is not left waiting for T3.
 
 | # | From | Trigger | To | Notes |
 |---|---|---|---|---|
-| 1 | – | start-up | EQUIPMENT OFF-LINE or ON-LINE | `EquipmentConfig.initial_online` |
+| 1 | - | start-up | EQUIPMENT OFF-LINE or ON-LINE | `EquipmentConfig.initial_online` |
 | 4 | EQUIPMENT OFF-LINE | operator ON-LINE | ATTEMPT ON-LINE | equipment sends S1F1 |
 | 5 | ATTEMPT ON-LINE | S1F0, T3, or not communicating | HOST OFF-LINE (configurable: EQUIPMENT OFF-LINE) | |
 | 6 | ATTEMPT ON-LINE | S1F2 | ON-LINE LOCAL/REMOTE | substate from the LOCAL/REMOTE switch |
 | 7 | ON-LINE | operator OFF-LINE | EQUIPMENT OFF-LINE | CE 100 |
 | 8 | ON-LINE | S1F15 | HOST OFF-LINE | OFLACK 0, CE 100 |
 | 9 | HOST OFF-LINE | S1F17 | ON-LINE | ONLACK 0, CE 101/102 |
-| – | EQUIPMENT OFF-LINE | S1F17 | (no change) | ONLACK 1 |
-| – | ON-LINE | S1F17 | (no change) | ONLACK 2 |
+| - | EQUIPMENT OFF-LINE | S1F17 | (no change) | ONLACK 1 |
+| - | ON-LINE | S1F17 | (no change) | ONLACK 2 |
 | 10 | HOST OFF-LINE | operator OFF-LINE | EQUIPMENT OFF-LINE | |
 | 11 | LOCAL ↔ REMOTE | operator switch | REMOTE ↔ LOCAL | CE 101/102; position remembered while off-line |
 
@@ -287,7 +314,7 @@ jump ahead. Elapsed time is measured with `time.perf_counter()`: on Windows,
 | 1024 / 1025 | WaferPresent / RobotBusy | SV | BOOLEAN | PLC |
 | 1026 | SequencerState | SV | U1 | PLC |
 | 1027 / 1028 / 1029 | StepNumber / StepName / StepTimeLeft | SV | U4 / A / F4 s | PLC |
-| 1030 – 1033 | LotID, LotWaferCount, WafersProcessed, WaferNumber | SV | A / U4 | PLC |
+| 1030 to 1033 | LotID, LotWaferCount, WafersProcessed, WaferNumber | SV | A / U4 | PLC |
 | 1040 | ControllerLinkUp | SV | BOOLEAN | GEM |
 | 1041 / 1042 | MDLN / SOFTREV | SV | A | GEM |
 | 2001 | EventWaferNumber | DV | U4 | event arg |
@@ -314,8 +341,8 @@ all-or-nothing.
 
 | CEID | Name | DVs |
 |---|---|---|
-| 100 / 101 / 102 | EquipmentOffline / ControlStateLocal / ControlStateRemote | – |
-| 110 | ProcessingStateChange | – (SV 1008/1009) |
+| 100 / 101 / 102 | EquipmentOffline / ControlStateLocal / ControlStateRemote | - |
+| 110 | ProcessingStateChange | - (SV 1008/1009) |
 | 120 | PPSelected | 2008 |
 | 130 / 131 / 132 / 133 | LotStarted / LotCompleted / LotStopped / LotAborted | 2006 (end events) |
 | 140 / 141 | WaferLoaded / PumpDownComplete | 2001 |
@@ -355,10 +382,10 @@ Checks run in this order; the first failure decides the answer:
 |---|---|---|
 | PP-SELECT | PPID (A, required) | unknown PPID → 6; sequencer not idle → 2; body fails to parse or controller rejects a setpoint → 3 / CPACK 2; ok → 0 + CE 120 |
 | START | LOTID (A ≤ 40, required), WAFERS (1..25 as U* or ASCII digits, default 1) | no PP selected → 2; already running → 5; interlock (wafer present, alarm latched) → 2; ok → 4 |
-| STOP | – | idle → 2; already requested → 5; ok → 4 (lot ends after the current wafer, CE 132) |
-| PAUSE | – | idle → 2; already held → 5; ok → 4 (CE 160) |
-| RESUME | – | not held → 5 (2 when idle with no alarm); interlock → 2; ok → 4 (CE 161) |
-| ABORT | – | idle → 2; already aborting → 5; ok → 4 (CE 133) |
+| STOP | - | idle → 2; already requested → 5; ok → 4 (lot ends after the current wafer, CE 132) |
+| PAUSE | - | idle → 2; already held → 5; ok → 4 (CE 160) |
+| RESUME | - | not held → 5 (2 when idle with no alarm); interlock → 2; ok → 4 (CE 161) |
+| ABORT | - | idle → 2; already aborting → 5; ok → 4 (CE 133) |
 
 Accepted sequencer commands answer HCACK 4 ("acknowledged, completion
 signalled later") because completion is reported by collection events.
@@ -367,7 +394,8 @@ signalled later") because completion is reported by collection events.
 
 Unformatted text recipes, one step per line
 (`STEP <name> TEMP=<°C> PRESSURE=<Torr> TIME=<s>`). Bodies are stored verbatim
-(A or B accepted in S7F3) and validated on PP-SELECT, the point where they are
+(A or B accepted in S7F3, and S7F6 returns the body in the same format) and
+validated on PP-SELECT, the point where they are
 turned into controller setpoints. The selected PP is locked while a lot runs:
 S7F1 answers PPGNT 4 (busy), S7F3 and S7F17 answer ACKC7 1. Limits: 32
 programs, 64 KiB per body. The store is in memory.
@@ -383,6 +411,7 @@ programs, 64 KiB per body. The store is in memory.
 | Host does not answer an equipment primary within T3 | S9F9 (SHEAD = header of the unanswered message) |
 | Off-line, any primary except S1F13/S1F17 | SxF0 |
 | HSMS session lost while S6F11/S5F1 are queued | discarded and logged (no spooling) |
+| Controller link down: S2F41 / S2F15 with machine constants | HCACK 2 / EAC 2, ALID 10 set |
 
 ## 9. Decisions and alternatives
 
@@ -406,8 +435,10 @@ programs, 64 KiB per body. The store is in memory.
 * GEM: `DirectLink` bench (equipment + host over real HSMS, controller in-process
   at ×100) for reports, HCACK/CPACK, alarms, PP management, stream 9.
 * End to end: controller OPC UA server + `OpcUaLink` + HSMS + host in one
-  process, running the same scenario as `make demo`, plus a controller-loss
-  test.
+  process, running the same scenario as `make demo`, plus a controller loss
+  and reconnect test.
+* Coverage: `docs/message_coverage.md` is generated from the dispatch table
+  and a test fails when the two disagree.
 
 Waits in tests use wall-clock deadlines. An earlier version counted iterations
 of `asyncio.sleep(0.01)` and failed intermittently: on Windows the real length
