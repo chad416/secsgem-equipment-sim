@@ -8,3 +8,10 @@ __pycache__/
 build/
 dist/
 .pytest_tmp/
+
+# local output of `make demo` and CI runs (committed evidence lives in artifacts/)
+out/
+artifacts-ci/
+
+# local notes that are not part of the project
+/*_NOTES.md
