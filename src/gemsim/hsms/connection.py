@@ -187,6 +187,8 @@ class HsmsConnection:
         self._set_state(State.SELECTED)
 
     async def deselect(self) -> int:
+        """Deselect.req. E37.1 (HSMS-SS) ends a session with Separate instead; the
+        passive side still answers Deselect for hosts that send it."""
         rsp = await self._control_transaction(SType.DESELECT_REQ, SType.DESELECT_RSP)
         if rsp.byte3 == DeselectStatus.OK:
             self._set_state(State.NOT_SELECTED)

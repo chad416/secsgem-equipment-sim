@@ -68,6 +68,16 @@ class Hooks:
     clear_fault: Callable[[], Awaitable[None]] | None = None
 
 
+class ScenarioError(RuntimeError):
+    """The equipment answered a configuration step with an unexpected code."""
+
+
+def expect(actual: object, expected: object, what: str) -> None:
+    """Check a reply code. Not an ``assert``: the check must survive ``python -O``."""
+    if actual != expected:
+        raise ScenarioError(f"{what}: expected {expected!r}, got {actual!r}")
+
+
 @dataclass
 class ScenarioResult:
     lot_id: str
@@ -115,24 +125,24 @@ async def run_lot_scenario(
         await hooks.operator_online()
 
     note("4. clean slate: delete all reports (S2F33 with empty list), then define, link, enable")
-    await host.define_reports({})
-    assert await host.define_reports(REPORTS) == 0
-    assert await host.link_events(LINKS) == 0
-    assert await host.enable_events() == 0
-    assert await host.enable_alarms() == 0
+    expect(await host.define_reports({}), 0, "S2F33 delete all (DRACK)")
+    expect(await host.define_reports(REPORTS), 0, "S2F33 define (DRACK)")
+    expect(await host.link_events(LINKS), 0, "S2F35 link (LRACK)")
+    expect(await host.enable_events(), 0, "S2F37 enable all (ERACK)")
+    expect(await host.enable_alarms(), 0, "S5F3 enable all (ACKC5)")
 
     note("5. read status variables and equipment constants, shorten pump-down timeout")
     await host.status_variables(
         [SV.CONTROL_STATE, SV.PROCESS_STATE, SV.CHAMBER_PRESSURE, SV.CHUCK_TEMPERATURE]
     )
     await host.equipment_constants([EC.PUMPDOWN_TIMEOUT, EC.BASE_PRESSURE, EC.TEMP_HIGH_LIMIT])
-    assert await host.set_equipment_constants({EC.PUMPDOWN_TIMEOUT: F4(60.0)}) == 0
+    expect(await host.set_equipment_constants({EC.PUMPDOWN_TIMEOUT: F4(60.0)}), 0, "S2F15 (EAC)")
 
     note(f"6. process program download {ppid} (S7F1/S7F3), directory (S7F19), upload check (S7F5)")
     body = recipe.read_text(encoding="ascii")
-    assert await host.pp_download(ppid, body) == (0, 0)
-    assert ppid in await host.pp_list()
-    assert await host.pp_upload(ppid) == body
+    expect(await host.pp_download(ppid, body), (0, 0), "S7F1/S7F3 (PPGNT, ACKC7)")
+    expect(ppid in await host.pp_list(), True, "S7F19 directory contains the PPID")
+    expect(await host.pp_upload(ppid), body, "S7F5 upload equals the download")
 
     status = await host.status_variables([SV.CONTROL_STATE])
     if status[0] != ControlState.ONLINE_REMOTE:
@@ -202,7 +212,7 @@ async def run_lot_scenario(
     note(f"15. lot complete: equipment reports {result.wafers_reported} wafers; final status")
     await host.status_variables([SV.PROCESS_STATE, SV.WAFERS_PROCESSED, SV.ALARMS_SET, SV.PP_EXEC_NAME])
 
-    note("16. host takes the tool off-line (S1F15), waits for CE EquipmentOffline, deselect and separate")
+    note("16. host takes the tool off-line (S1F15), waits for CE EquipmentOffline, then Separate")
     since = host.cursor()
     await host.request_offline()
     await host.wait_event(CE.EQUIPMENT_OFFLINE, since=since, timeout=event_timeout)

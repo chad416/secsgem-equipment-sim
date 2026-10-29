@@ -26,6 +26,7 @@ async def test_demo_lot_with_fault_and_recovery(tmp_path: Path) -> None:
         "CLEARED ALID 1 ALCD 0x04",
     ]
     text = (tmp_path / "demo_trace.sml").read_text(encoding="utf-8")
+    assert "Separate.req" in text and "Deselect.req" not in text  # HSMS-SS: end with Separate
     assert "S5F1 W" in text and "<B [1] 0x84>" in text and "<B [1] 0x04>" in text
     assert trace.counts["S6F11"] == trace.counts["S6F12"] > 20
     assert (tmp_path / "demo_summary.txt").read_text(encoding="utf-8").startswith("result            : PASS")

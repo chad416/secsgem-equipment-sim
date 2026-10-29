@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-import contextlib
 import logging
 import time
 from collections.abc import Callable, Mapping, Sequence
@@ -94,9 +93,8 @@ class GemHost:
         )
 
     async def close(self) -> None:
+        """End the session with Separate.req (the HSMS-SS way; no Deselect)."""
         if self.conn and not self.conn.closed:
-            with contextlib.suppress(HsmsError):
-                await self.conn.deselect()
             await self.conn.separate()
 
     async def request(self, stream: int, function: int, body: Item | None = None) -> SecsMessage:
