@@ -10,6 +10,7 @@ import pytest
 import secsgem.hsms as sg_hsms
 
 from gemsim.hsms import (
+    ConnectionClosed,
     ControlTimeout,
     HsmsConnection,
     HsmsHeader,
@@ -190,3 +191,22 @@ async def test_t5_retry_then_give_up() -> None:
     with pytest.raises(ConnectionError):
         await connect_active("127.0.0.1", port, session_id=1, timeouts=T, handler=echo, attempts=3)
     assert loop.time() - t0 >= 2 * T.t5  # two T5 waits between three attempts
+
+
+async def test_reader_failure_closes_the_connection() -> None:
+    """An exception while handling a frame drops the session instead of leaving it half dead."""
+
+    def broken_trace(direction: str, header: HsmsHeader, msg: SecsMessage | None) -> None:
+        if direction == "rx" and header.stype == SType.LINKTEST_REQ:
+            raise RuntimeError("trace hook bug")
+
+    srv = HsmsPassiveServer("127.0.0.1", 0, session_id=1, timeouts=T, handler=echo, trace=broken_trace)
+    await srv.start()
+    try:
+        conn = await active(srv.port)
+        with pytest.raises(ConnectionClosed):  # the passive side drops the session
+            await conn.linktest()
+        await wait_until(lambda: srv.connection is not None and srv.connection.closed, 2, "close")
+        assert srv.connection.close_reason == "internal error in reader"
+    finally:
+        await srv.stop()

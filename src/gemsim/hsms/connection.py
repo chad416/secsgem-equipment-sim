@@ -336,8 +336,11 @@ class HsmsConnection:
             await self.close("T8 inter-character timeout")
         except (ConnectionClosed, ConnectionError, OSError) as exc:
             await self.close(str(exc) or type(exc).__name__)
-        except asyncio.CancelledError:
-            raise
+        except Exception:
+            # A bug while handling one frame must not leave a half-dead session
+            # whose reader has stopped: log it and drop the connection.
+            log.exception("%s: reader failed", self.name)
+            await self.close("internal error in reader")
 
     async def _reject(self, header: HsmsHeader, reason: RejectReason) -> None:
         byte2 = header.ptype if reason is RejectReason.PTYPE_NOT_SUPPORTED else header.stype
