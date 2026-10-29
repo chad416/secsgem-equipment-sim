@@ -45,7 +45,7 @@ def spans(t: list[float], flags: list[bool]) -> list[tuple[float, float]]:
 def main() -> int:
     rows = list(csv.DictReader(SRC.open(encoding="utf-8")))
     if not rows:
-        print(f"no samples in {SRC}")
+        print(f"no samples in {SRC.relative_to(ROOT).as_posix()}")
         return 1
     t = [float(r["process_s"]) for r in rows]
     p = [float(r["pressure_torr"]) for r in rows]
@@ -66,7 +66,7 @@ def main() -> int:
         for side in ("left", "bottom"):
             ax.spines[side].set_color(GRID)
         for a, b in spans(t, alarm):
-            ax.axvspan(a, b, color=CRITICAL, alpha=0.10, linewidth=0)
+            ax.axvspan(a, b, color=CRITICAL, alpha=0.30, linewidth=0)
         for a, b in spans(t, fault):
             ax.axvspan(a, b, facecolor="none", edgecolor=TEXT_2, hatch="//", alpha=0.35, linewidth=0)
 
@@ -98,9 +98,9 @@ def main() -> int:
         ax_p.annotate(
             "ALID 1 set: pump-down timeout\n(cleared by RESUME)",
             xy=((a + b) / 2, 2.0),
-            xytext=(0, 26),
+            xytext=(16, 34),
             textcoords="offset points",
-            ha="center",
+            ha="left",
             color=TEXT,
             fontsize=9,
             arrowprops={"arrowstyle": "-", "color": TEXT_2, "linewidth": 0.8},
@@ -128,14 +128,15 @@ def main() -> int:
     fig.text(
         0.01,
         0.925,
-        f"{len(rows)} samples from artifacts/demo_process.csv, recorded every 0.1 s wall time",
+        f"{len(rows)} samples from artifacts/demo_process.csv, recorded every 0.1 s wall time"
+        " and on every state or alarm change",
         fontsize=9,
         color=TEXT_2,
     )
     fig.tight_layout(rect=(0, 0, 1, 0.92))
     OUT.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(OUT, dpi=150, facecolor=SURFACE)
-    print(f"wrote {OUT}")
+    print(f"wrote {OUT.relative_to(ROOT).as_posix()}")
     return 0
 
 

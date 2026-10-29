@@ -50,12 +50,24 @@ PROCESS_COLUMNS = (
 
 
 async def sample_process(server: ControllerServer, path: Path, period_s: float = 0.1) -> None:
-    """Record the controller's process image (the PLC's view) for plotting."""
+    """Record the controller's process image (the PLC's view) for plotting.
+
+    One row every ``period_s``, plus a row whenever the sequencer state, alarm
+    word or fault mask changes, so a hold shorter than the period still shows up.
+    """
     c = server.controller
+    loop = asyncio.get_running_loop()
+    last_row = -period_s
+    last_key: tuple[object, ...] = ()
     with path.open("w", encoding="utf-8", newline="\n") as f:
         out = csv.writer(f, lineterminator="\n")
         out.writerow(PROCESS_COLUMNS)
         while True:
+            await asyncio.sleep(server.loop.scan_s)
+            key = (c.state, c.alarm_word, c.faults)
+            if loop.time() - last_row < period_s and key == last_key:
+                continue
+            last_row, last_key = loop.time(), key
             out.writerow(
                 (
                     f"{server.loop.process_time:.2f}",
@@ -70,7 +82,6 @@ async def sample_process(server: ControllerServer, path: Path, period_s: float =
                 )
             )
             f.flush()
-            await asyncio.sleep(period_s)
 
 
 def quiet_third_party_logs() -> None:

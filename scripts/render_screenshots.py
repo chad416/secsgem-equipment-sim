@@ -1,14 +1,12 @@
 """Render captured demo output as PNG screenshots (Windows, headless Microsoft Edge).
 
-Inputs are files written by a real run (nothing is typed in by hand):
-  artifacts/demo_console.txt   console output of `make demo > artifacts/demo_console.txt 2>&1`
+Inputs are files written by a real run (`make evidence`; nothing is typed in by hand):
+  artifacts/demo_console.txt   console output of `python -m gemsim demo --out artifacts`
   artifacts/demo_trace.sml     SML trace of the same run
-  artifacts/check_output.txt   output of `make check > artifacts/check_output.txt 2>&1`
 
 Outputs in docs/screenshots/:
   demo_console.png            start and end of the console output (middle lines elided, with a marker)
   trace_fault_recovery.png    trace sections 12-14: alarm, hold, RESUME, recovery
-  make_check.png              lint, type check and test run
 
     python scripts/render_screenshots.py
 """
@@ -81,7 +79,7 @@ def shoot(name: str, title: str, lines: list[str], width: int) -> None:
     while time.monotonic() < deadline:
         size = out.stat().st_size if out.exists() else -1
         if size > 0 and size == last:
-            print(f"wrote {out} ({size} bytes)")
+            print(f"wrote {out.relative_to(ROOT).as_posix()} ({size} bytes)")
             return
         last = size
         time.sleep(0.5)
@@ -121,9 +119,7 @@ def main() -> int:
         if n:
             shown.append(f"[... {a - keep[n - 1][1]} lines omitted ...]")
         shown.extend(console[a:b])
-    shoot("demo_console", "make demo  (console output, captured)", shown, 1500)
-    check = (ART / "check_output.txt").read_text(encoding="utf-8").splitlines()
-    shoot("make_check", "make check  (ruff, mypy --strict, pytest; output captured)", check, 1000)
+    shoot("demo_console", "python -m gemsim demo  (console output, captured)", shown, 1500)
     trace = (ART / "demo_trace.sml").read_text(encoding="utf-8").splitlines()
     fault = section(trace, "// ---- 12.", "// ---- 15.")
     shoot("trace_fault_recovery", "artifacts/demo_trace.sml  (sections 12-14)", elide(fault, 118, 0), 900)
