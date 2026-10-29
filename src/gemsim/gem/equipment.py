@@ -145,7 +145,6 @@ class GemEquipment:
         self.selected: Recipe | None = None
         self.clock_offset = 0.0
         self.dataid = 0
-        self.ce_history: list[tuple[int, dict[int, Any]]] = []
         self.server = HsmsPassiveServer(
             self.cfg.host,
             self.cfg.port,
@@ -668,7 +667,6 @@ class GemEquipment:
         self, ceid: CE, context: dict[int, Any] | None = None, *, force: bool = False
     ) -> None:
         ctx = dict(context or {})
-        self.ce_history.append((int(ceid), ctx))
         if not (self.control.online or force) or ceid not in self.reports.enabled:
             return
         self._outbox.put_nowait(SecsMessage(6, 11, True, self._report_body(ceid, ctx)))

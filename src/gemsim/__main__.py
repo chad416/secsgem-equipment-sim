@@ -26,7 +26,7 @@ from .demo import DEFAULT_RECIPE, ROOT, format_summary, quiet_third_party_logs, 
 from .gem.equipment import EquipmentConfig, GemEquipment
 from .host.host import GemHost
 from .host.scenario import run_lot_scenario
-from .secs import U4, A, Item, SecsMessage, u4_list
+from .secs import u4_list
 from .trace import SmlTrace
 
 DEFAULT_OPCUA = "opc.tcp://127.0.0.1:4840/gemsim/"
@@ -44,11 +44,21 @@ async def cmd_demo(args: argparse.Namespace) -> int:
         fault_wafer=None if args.no_fault else args.fault_wafer,
         echo=None if args.quiet else sys.stdout,
     )
+    out = Path(args.out)
     print()
     print(format_summary(result, trace), end="")
-    print(f"full SML trace    : {Path(args.out) / 'demo_trace.sml'}")
-    print(f"equipment log     : {Path(args.out) / 'demo_equipment.log'}")
+    print(f"full SML trace    : {display_path(out / 'demo_trace.sml')}")
+    print(f"equipment log     : {display_path(out / 'demo_equipment.log')}")
     return 0 if result.ok else 1
+
+
+def display_path(path: Path) -> str:
+    """Path relative to the repository (or the working directory), never absolute."""
+    resolved = path.resolve()
+    for base in (ROOT, Path.cwd()):
+        if resolved.is_relative_to(base):
+            return resolved.relative_to(base).as_posix()
+    return path.name
 
 
 async def cmd_controller(args: argparse.Namespace) -> int:
@@ -86,11 +96,6 @@ async def cmd_inject(args: argparse.Namespace) -> int:
     await client.close()
     print(f"Sim.Faults = {int(faults)} ({faults!r})")
     return 0
-
-
-def parse_value(token: str) -> Item:
-    """Shell literal: 12 -> U4, 1.5 -> A('1.5'), anything else -> A."""
-    return U4(int(token)) if token.isdigit() else A(token)
 
 
 async def cmd_host(args: argparse.Namespace) -> int:
@@ -165,8 +170,7 @@ async def interactive(host: GemHost) -> None:
             elif cmd == "send":
                 s, f = int(rest[0]), int(rest[1])
                 body = u4_list(int(x) for x in rest[2:]) if len(rest) > 2 else None
-                reply = await host.request(s, f, body)
-                assert isinstance(reply, SecsMessage)
+                await host.request(s, f, body)  # the reply is echoed by the trace
             elif cmd == "events":
                 for e in host.events:
                     print(f"CEID {e.ceid} DATAID {e.dataid} {e.reports}")
@@ -184,7 +188,7 @@ def build_parser() -> argparse.ArgumentParser:
     sub = p.add_subparsers(dest="command", required=True)
 
     d = sub.add_parser("demo", help="run controller + equipment + host lot scenario")
-    d.add_argument("--out", default=str(ROOT / "artifacts"))
+    d.add_argument("--out", default=str(ROOT / "out"), help="output directory (default: out/)")
     d.add_argument("--time-scale", type=float, default=25.0)
     d.add_argument("--wafers", type=int, default=3)
     d.add_argument("--fault-wafer", type=int, default=2)
