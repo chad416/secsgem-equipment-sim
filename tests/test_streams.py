@@ -119,3 +119,14 @@ async def test_clock_and_time_set(bench: Bench) -> None:
     short = (await host.request(2, 17)).body
     assert isinstance(short, A) and len(short.value) == 12
     assert dt.datetime.strptime(short.value, "%y%m%d%H%M%S").year == 2030
+
+
+async def test_machine_constants_refused_while_controller_link_is_down(bench: Bench) -> None:
+    host, link = bench.host, bench.link
+    link._set_connected(False)  # as an OPC UA session loss would
+    assert await host.set_equipment_constants({EC.PUMPDOWN_TIMEOUT: F4(45.0)}) == 2  # EAC 2
+    assert link.controller.params.pumpdown_timeout_s == 90.0
+    assert await host.set_equipment_constants({EC.TIME_FORMAT: U1(0)}) == 0  # GEM-only EC still works
+    link._set_connected(True)
+    await wait_until(lambda: bench.equipment.controller_ok(), 2, "link alarm cleared")
+    assert await host.set_equipment_constants({EC.PUMPDOWN_TIMEOUT: F4(45.0)}) == 0

@@ -440,10 +440,13 @@ class GemEquipment:
                 return B(b"\x03")  # EAC 3: out of range (or wrong format)
             updates.append((ec, value))
         machine = {ec.controller_tag: v for ec, v in updates if ec.controller_tag is not None}
-        if machine and self.link.status.get("Seq.State") != SeqState.IDLE:
-            return B(b"\x02")  # EAC 2: busy - machine parameters only change while idle
         if machine:
-            await self.link.write_params(machine)
+            # EAC 2 (busy): machine parameters change only while the sequencer is
+            # idle, and only when the controller is there to take them.
+            if not self.controller_ok() or self.link.status.get("Seq.State") != SeqState.IDLE:
+                return B(b"\x02")
+            if not await self.link.write_params(machine):
+                return B(b"\x02")
         for ec, value in updates:
             ec.value = value
         return B(b"\x00")
