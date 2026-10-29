@@ -210,3 +210,19 @@ async def test_reader_failure_closes_the_connection() -> None:
         assert srv.connection.close_reason == "internal error in reader"
     finally:
         await srv.stop()
+
+
+async def test_periodic_linktest(server: HsmsPassiveServer) -> None:
+    sent: list[str] = []
+
+    def count(direction: str, header: HsmsHeader, msg: SecsMessage | None) -> None:
+        if direction == "tx" and header.stype == SType.LINKTEST_REQ:
+            sent.append(header.describe())
+
+    timeouts = HsmsTimeouts(t3=0.5, t5=0.1, t6=0.5, t7=0.5, t8=0.3, linktest=0.1)
+    conn = await connect_active(
+        "127.0.0.1", server.port, session_id=1, timeouts=timeouts, handler=echo, trace=count
+    )
+    await wait_until(lambda: len(sent) >= 3, 3, "three Linktest.req")
+    assert conn.state is State.SELECTED  # every Linktest.rsp arrived within T6
+    await conn.separate()
