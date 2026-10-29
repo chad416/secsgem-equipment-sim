@@ -570,12 +570,12 @@ class GemEquipment:
         body = ensure_list(msg.body, min_len=2)
         ppbody = body[1]
         if isinstance(ppbody, A):
-            data = ppbody.value.encode("ascii")
+            data, binary = ppbody.value.encode("ascii"), False
         elif isinstance(ppbody, B):
-            data = ppbody.value
+            data, binary = ppbody.value, True
         else:
             raise SecsDecodeError("PPBODY must be <A> or <B>")
-        return B(bytes([self.pps.store(as_text(body[0]), data)]))
+        return B(bytes([self.pps.store(as_text(body[0]), data, binary=binary)]))
 
     async def _s7f5(self, msg: SecsMessage) -> Item:
         if msg.body is None:
@@ -584,7 +584,8 @@ class GemEquipment:
         data = self.pps.get(ppid)
         if data is None:
             return L()  # E5: zero-length list when PPID is unknown
-        return L(A(ppid), A(data.decode("ascii", errors="replace")))
+        # PPBODY goes back in the format it was downloaded in.
+        return L(A(ppid), B(data) if self.pps.is_binary(ppid) else A(data.decode("ascii")))
 
     async def _s7f17(self, msg: SecsMessage) -> Item:
         ppids = [as_text(p) for p in ensure_list(msg.body)]

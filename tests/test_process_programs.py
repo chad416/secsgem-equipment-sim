@@ -63,6 +63,15 @@ async def test_binary_ppbody_accepted(bench: Bench) -> None:
     assert await host.pp_upload("RB") == RECIPE
 
 
+async def test_s7f6_returns_ppbody_in_the_downloaded_format(bench: Bench) -> None:
+    host = bench.host
+    raw = bytes(range(256))  # not ASCII: must come back byte for byte as <B>
+    assert (await host.request(7, 3, L(A("BIN"), B(raw)))).body == B(b"\x00")
+    assert (await host.request(7, 5, A("BIN"))).body == L(A("BIN"), B(raw))
+    assert (await host.request(7, 3, L(A("TXT"), A(RECIPE)))).body == B(b"\x00")
+    assert (await host.request(7, 5, A("TXT"))).body == L(A("TXT"), A(RECIPE))
+
+
 async def test_s7f1_grant_codes_over_the_wire(bench: Bench) -> None:
     host = bench.host
     assert (await host.request(7, 1, L(A("has space"), U4(10)))).body == B(bytes([PpGnt.INVALID_PPID]))

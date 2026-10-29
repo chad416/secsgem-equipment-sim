@@ -87,6 +87,7 @@ class ProcessProgramStore:
         self.max_programs = max_programs
         self.max_body = max_body
         self.programs: dict[str, bytes] = {}
+        self._binary: set[str] = set()  # PPIDs downloaded as <B> rather than <A>
         self.locked: str | None = None  # selected PP while a lot is running
 
     def inquire(self, ppid: str, length: int) -> PpGnt:
@@ -99,7 +100,7 @@ class ProcessProgramStore:
             return PpGnt.NO_SPACE
         return PpGnt.OK
 
-    def store(self, ppid: str, body: bytes) -> AckC7:
+    def store(self, ppid: str, body: bytes, *, binary: bool = False) -> AckC7:
         """S7F3. Overwrites an existing PP with the same PPID."""
         if not PPID_RE.match(ppid):
             return AckC7.OTHER_ERROR
@@ -110,10 +111,17 @@ class ProcessProgramStore:
         if ppid not in self.programs and len(self.programs) >= self.max_programs:
             return AckC7.MATRIX_OVERFLOW
         self.programs[ppid] = body
+        if binary:
+            self._binary.add(ppid)
+        else:
+            self._binary.discard(ppid)
         return AckC7.ACCEPTED
 
     def get(self, ppid: str) -> bytes | None:
         return self.programs.get(ppid)
+
+    def is_binary(self, ppid: str) -> bool:
+        return ppid in self._binary
 
     def delete(self, ppids: list[str]) -> AckC7:
         """S7F17. An empty list deletes all programs. All-or-nothing."""
@@ -124,6 +132,7 @@ class ProcessProgramStore:
             return AckC7.PERMISSION_NOT_GRANTED
         for p in targets:
             del self.programs[p]
+            self._binary.discard(p)
         return AckC7.ACCEPTED
 
     def directory(self) -> list[str]:

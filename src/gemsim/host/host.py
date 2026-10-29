@@ -21,6 +21,7 @@ from ..secs import (
     L,
     SecsMessage,
     as_int,
+    as_text,
     ensure_list,
     u4_list,
 )
@@ -251,9 +252,13 @@ class GemHost:
         return grant, _ack(await self.request(7, 3, L(A(ppid), A(body))))
 
     async def pp_upload(self, ppid: str) -> str | None:
+        """S7F5. Returns the PPBODY as text (an <A> or ASCII <B> body), None if unknown."""
         reply = await self.request(7, 5, A(ppid))
         body = ensure_list(reply.body)
-        return str(body[1].to_python()) if len(body) == 2 else None
+        if len(body) != 2:
+            return None
+        ppbody = body[1]
+        return ppbody.value.decode("ascii") if isinstance(ppbody, B) else as_text(ppbody)
 
     async def pp_list(self) -> list[str]:
         return [str(p) for p in ensure_list((await self.request(7, 19)).body).to_python()]
