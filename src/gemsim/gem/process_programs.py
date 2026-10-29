@@ -17,8 +17,7 @@ import enum
 import re
 from dataclasses import dataclass
 
-from ..controller.interface import MAX_RECIPE_STEPS
-from ..controller.model import RecipeStep
+from ..controller.interface import MAX_RECIPE_STEPS, RecipeStep
 
 PPID_RE = re.compile(r"^[A-Za-z0-9_.\-]{1,32}$")
 STEP_RE = re.compile(

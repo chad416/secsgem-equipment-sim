@@ -38,6 +38,7 @@ from .interface import (
     EventCode,
     Fault,
     HeldReason,
+    RecipeStep,
     SeqState,
 )
 
@@ -52,14 +53,6 @@ THROTTLE_TAU = 2.0
 RAMP_RATE_C_S = 10.0
 RUNAWAY_RATE_C_S = 15.0
 OVERTEMP_RESET_HYST_C = 20.0
-
-
-@dataclass(frozen=True)
-class RecipeStep:
-    name: str
-    temp_c: float
-    pressure_torr: float
-    duration_s: float
 
 
 @dataclass

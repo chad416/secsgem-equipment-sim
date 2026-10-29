@@ -6,10 +6,22 @@ so they are deterministic and independent of wall-clock timing.
 
 from __future__ import annotations
 
+import ast
+from pathlib import Path
+
 import pytest
 
-from gemsim.controller.interface import AlarmBit, CmdCode, CmdResult, EventCode, Fault, HeldReason, SeqState
-from gemsim.controller.model import ATMOSPHERE_TORR, ChamberController, RecipeStep
+from gemsim.controller.interface import (
+    AlarmBit,
+    CmdCode,
+    CmdResult,
+    EventCode,
+    Fault,
+    HeldReason,
+    RecipeStep,
+    SeqState,
+)
+from gemsim.controller.model import ATMOSPHERE_TORR, ChamberController
 
 STEPS = [RecipeStep("HEAT", 200, 0.5, 20), RecipeStep("SOAK", 300, 0.2, 30)]
 DT = 0.5
@@ -209,3 +221,13 @@ def test_event_ring_wraps(ctl: ChamberController) -> None:
         ctl._emit(EventCode.RESUMED)
     assert ctl.event_write_idx == 201  # +1 for RECIPE_LOADED
     assert all(code == EventCode.RESUMED for code in ctl.event_codes)
+
+
+def test_gem_layer_does_not_import_the_controller_model() -> None:
+    """The GEM side may use the interface contract and the link, never the PLC model."""
+    gem_dir = Path(__file__).resolve().parents[1] / "src" / "gemsim" / "gem"
+    for path in gem_dir.glob("*.py"):
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ImportFrom) and node.module:
+                assert not node.module.endswith("controller.model"), f"{path.name} imports the model"

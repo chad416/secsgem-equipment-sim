@@ -26,8 +26,9 @@ from .interface import (
     CmdResult,
     EventCode,
     Fault,
+    RecipeStep,
 )
-from .model import ChamberController, Params, RecipeStep
+from .model import ChamberController, Params
 from .runtime import ScanLoop
 
 log = logging.getLogger(__name__)

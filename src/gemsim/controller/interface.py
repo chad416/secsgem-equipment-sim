@@ -9,12 +9,23 @@ import it, so the two sides cannot drift apart silently.
 from __future__ import annotations
 
 import enum
+from dataclasses import dataclass
 
 NAMESPACE_URI = "urn:gemsim:chamber-controller"
 OBJECT = "Chamber1"
 EVENT_RING_SIZE = 64
 MAX_RECIPE_STEPS = 16
 MAX_WAFERS_PER_LOT = 25
+
+
+@dataclass(frozen=True)
+class RecipeStep:
+    """One recipe step as downloaded to the controller (``RecipeIn.*`` arrays)."""
+
+    name: str
+    temp_c: float
+    pressure_torr: float
+    duration_s: float
 
 
 class SeqState(enum.IntEnum):
